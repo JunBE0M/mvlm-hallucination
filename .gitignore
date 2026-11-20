@@ -1,0 +1,23 @@
+# datasets / caches
+val2017/
+annotations/
+*.zip
+hf_cache/
+.venv/
+
+# large artifacts
+*.pt
+*.npy
+*.npz
+*.parquet
+results/raw/
+data/*.jsonl
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# secrets
+.env
+results/figs/

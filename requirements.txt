@@ -1,0 +1,17 @@
+# 모델 관련: transformers 5.22.2 소스를 직접 확인해 고정 (README "확인된 사항" 참고)
+torch==2.14.1
+torchvision==0.29.2      # Qwen2VL processor(비디오 프로세서)가 import 시 요구
+transformers==5.22.2
+accelerate==1.15.0       # device_map 사용
+# qwen-vl-utils 는 사용하지 않음 (이미지는 PIL로 열고 processor에 size=로 해상도 지정)
+
+# 데이터/분석
+numpy==2.3.0
+pandas==2.3.3
+pyarrow==21.0.0
+pyyaml==6.0.3
+pillow==11.3.0
+scipy==1.16.2
+matplotlib==3.10.6
+tqdm==4.67.1
+pytest==9.0.1
