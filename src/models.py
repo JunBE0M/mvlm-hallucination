@@ -90,8 +90,10 @@ class BaseVLM:
 class QwenVL25(BaseVLM):
     def __init__(self, name: str, hf_id: str, attn_impl: str = "sdpa", dtype: str = "bfloat16",
                  max_pixels: int | None = 448 * 448, min_pixels: int | None = None, device: str = "cuda",
-                 model=None, processor=None):
-        """model/processor 를 직접 넘기면 from_pretrained 를 건너뜀 (테스트용 소형 랜덤 모델)."""
+                 model=None, processor=None, image_labels: bool = False):
+        """model/processor 를 직접 넘기면 from_pretrained 를 건너뜀 (테스트용 소형 랜덤 모델).
+        image_labels=True: 각 이미지 앞에 "Image i: " 텍스트를 넣는다 (위치/구분 효과 통제 조건)."""
+        self.image_labels = image_labels
         import torch
         from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
         from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import Qwen2_5_VLAttention
@@ -130,7 +132,13 @@ class QwenVL25(BaseVLM):
               f"vision_end={self.vision_end_id} | image size={self.size} | attn={attn_impl}")
 
     def chat_text(self, n_images: int, question: str) -> str:
-        content = [{"type": "image"} for _ in range(n_images)] + [{"type": "text", "text": question}]
+        if getattr(self, "image_labels", False):
+            content = []
+            for i in range(n_images):
+                content += [{"type": "text", "text": f"Image {i + 1}: "}, {"type": "image"}]
+            content.append({"type": "text", "text": "\n" + question})
+        else:
+            content = [{"type": "image"} for _ in range(n_images)] + [{"type": "text", "text": question}]
         msgs = [{"role": "user", "content": content}]
         return self.processor.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
 
@@ -140,9 +148,16 @@ class QwenVL25(BaseVLM):
         return inputs.to(self.model.device)
 
     def forward_last_logits(self, inputs):
-        with self._torch.inference_mode():
-            out = self.model(**inputs, logits_to_keep=1, use_cache=False)
-        return out.logits[0, -1].float().cpu()
+        """본체는 모델 dtype(bf16)으로, 마지막 위치의 lm_head 만 fp32 로 계산.
+        bf16 lm_head 출력은 logit ~20 부근에서 0.125 단위로 양자화되어 m=logit(Yes)-logit(No) 에 동점/잡음이 생긴다.
+        transformers 5.22.2 Qwen2_5_VLForConditionalGeneration.forward 와 동일 경로: self.model(...)[0] -> lm_head."""
+        torch = self._torch
+        with torch.inference_mode():
+            hidden = self.model.model(**inputs, use_cache=False)[0][0, -1]          # [D]
+            if getattr(self, "_lm_head_fp32", None) is None:
+                self._lm_head_fp32 = self.model.lm_head.weight.detach().float()     # [V, D]
+            logits = torch.nn.functional.linear(hidden.float(), self._lm_head_fp32)
+        return logits.cpu()
 
     def segments(self, inputs) -> Segments:
         ids = inputs["input_ids"][0].tolist()

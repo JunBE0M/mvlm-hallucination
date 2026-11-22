@@ -57,7 +57,10 @@ def last_row_attention(query, key, attention_mask, scaling: float):
 class LastRowAttentionProbe:
     """with LastRowAttentionProbe(vlm) as probe: probe.set_segments(seg); vlm.forward_last_logits(inputs); probe.result()"""
 
-    def __init__(self, vlm, impl: str = "eager", verify: bool = False):
+    def __init__(self, vlm, impl: str = "eager", verify: bool = False, base: str | None = None):
+        """impl: 래퍼를 등록할 레지스트리 키(모델 로드 시 attn_implementation). base: 실제 출력 계산 함수.
+        base="sdpa" 가 기본 (eager 의 bf16 matmul 은 7B 에서 출력이 크게 어긋남). --verify 는 base="eager" 필요."""
+        self.base = base if base is not None else ("eager" if verify else "sdpa")
         from transformers.modeling_utils import ALL_ATTENTION_FUNCTIONS
         self.vlm = vlm
         self.impl = impl
@@ -84,6 +87,8 @@ class LastRowAttentionProbe:
             del reg[self.impl]
 
     def _base_fn(self, module):
+        if self.base == "sdpa":
+            return self._sdpa_fn
         if self.impl == "eager":
             return sys.modules[type(module).__module__].eager_attention_forward
         if self.impl == "sdpa":
@@ -167,9 +172,11 @@ def main(argv=None):
             return
         vlm = load_model(args.model or mc["name"], attn_impl="eager", dtype=mc.get("dtype", "bfloat16"),
                          max_pixels=args.max_pixels or mc.get("max_pixels"),
-                         min_pixels=mc.get("min_pixels"), device=args.device)
+                         min_pixels=mc.get("min_pixels"), device=args.device,
+                         image_labels=args.image_labels)
         t0, n_err = time.time(), 0
-        with LastRowAttentionProbe(vlm, impl="eager", verify=args.verify) as probe:
+        with LastRowAttentionProbe(vlm, impl="eager", verify=args.verify,
+                                   base="eager" if args.verify else "sdpa") as probe:
             for i, q in enumerate(todo, 1):
                 try:
                     images = load_images(q["image_paths"], cfg["coco"]["root"])

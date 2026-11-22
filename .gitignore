@@ -10,7 +10,8 @@ hf_cache/
 *.npy
 *.npz
 *.parquet
-results/raw/
+results/raw/_eager_old/
+results/raw/*_npz/
 data/*.jsonl
 
 # python
@@ -20,4 +21,7 @@ __pycache__/
 
 # secrets
 .env
-results/figs/
+.claude/settings.local.json
+
+# run logs (진행 출력)
+logs/*.log
