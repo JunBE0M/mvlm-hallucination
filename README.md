@@ -1,6 +1,7 @@
 # mvlm-hallucination
 
 다중 이미지 VLM의 객체 존재 환각 연구용 실험 코드.
+**실험 결과, 결론, 다음 실험은 [EXPERIMENTS.md](EXPERIMENTS.md)에 정리했다.**
 "Is there a {obj} in all {N} images?"에 대해 한 장에 객체가 없어도 N≥4부터 거의 항상 Yes라고 답하는 현상
 (Qwen2.5-VL 3B/7B, COCO)을 다룬다. 가설: 모델이 이미지 간 정보를 min(∀)이 아니라 max/mean(∃)으로 집계하고,
 마지막 토큰의 attention이 객체가 없는 이미지를 오히려 덜 본다.
@@ -38,7 +39,15 @@ python -m src.analyze --e1 results/raw/e1_qwen3b.csv results/raw/e1_qwen7b.csv -
 | `src/run_eval.py` | E1: yes/no logit |
 | `src/attn_probe.py` | E2: 마지막 토큰→이미지별 attention |
 | `src/analyze.py` | 지표, 그래프 |
-| `results/` | 작은 요약 csv만 커밋. 원자료 `results/raw/`, 그림 `results/figs/` 는 gitignore |
+| `src/intervene.py` | E3: 특정 이미지 attention ×α 개입 |
+| `src/make_neg.py` | M0: 부정 질문 jsonl 생성 |
+| `src/per_image.py` | M1: 이미지별 단일 질문 + 집계 |
+| `src/isolated.py` | M2: 이미지별 격리 판독 (attention knockout) |
+| `src/focus.py` | M3/M5: 선택한 이미지에 attention 집중 |
+| `src/head_detect.py` | M5: E2 npz에서 탐지 헤드 선택, 이미지별 점수 |
+| `src/compare_methods.py` | 방법 비교 표 |
+| `logs/*.sh` | 실제로 돌린 실험 큐 |
+| `results/` | 요약 csv, 그림(`figs/`), 문항별 원자료 csv(`raw/`). npz와 eager 시절 결과(`raw/_eager_old/`)는 gitignore |
 
 ## 설계 결정
 
