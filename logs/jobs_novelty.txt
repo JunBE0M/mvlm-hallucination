@@ -28,3 +28,5 @@ F10_qwen3vl8b|bash logs/queue_novelty.sh qwen3-vl-8b qwen3vl8b F10
 F10_internvl8b|WAIT:OpenGVLab/InternVL3-8B-hf;bash logs/queue_novelty.sh internvl3-8b internvl8b F10
 F10_llavaov7b|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;bash logs/queue_novelty.sh llava-onevision-7b llavaov7b F10
 Call_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b Call
+B_internvl8b_both|bash logs/queue_B.sh internvl3-8b internvl8b teacherA teacherB train_both eval_both
+B_qwen3b_both|bash logs/queue_B.sh qwen2.5-vl-3b qwen3b teacherA teacherB train_both eval_both
