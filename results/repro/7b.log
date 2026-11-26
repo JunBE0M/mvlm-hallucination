@@ -1,0 +1,67 @@
+3200 questions, 20 already done, 3180 to run
+Loading weights:   0%|          | 0/729 [00:00<?, ?it/s]Loading weights:   0%|          | 2/729 [00:00<01:35,  7.60it/s]Loading weights:   2%|▏         | 11/729 [00:00<00:20, 35.75it/s]Loading weights:   3%|▎         | 24/729 [00:00<00:10, 66.31it/s]Loading weights:   5%|▍         | 35/729 [00:00<00:08, 80.17it/s]Loading weights:   6%|▋         | 46/729 [00:00<00:07, 88.22it/s]Loading weights:   8%|▊         | 56/729 [00:00<00:07, 91.48it/s]Loading weights:   9%|▉         | 66/729 [00:00<00:07, 92.86it/s]Loading weights:  11%|█         | 78/729 [00:00<00:06, 100.07it/s]Loading weights:  13%|█▎        | 94/729 [00:01<00:05, 115.75it/s]Loading weights:  15%|█▍        | 106/729 [00:01<00:05, 110.98it/s]Loading weights:  16%|█▋        | 120/729 [00:01<00:05, 117.82it/s]Loading weights:  18%|█▊        | 132/729 [00:01<00:05, 116.94it/s]Loading weights:  20%|█▉        | 144/729 [00:01<00:04, 117.37it/s]Loading weights:  22%|██▏       | 159/729 [00:01<00:04, 119.52it/s]Loading weights:  24%|██▎       | 172/729 [00:01<00:04, 116.29it/s]Loading weights:  25%|██▌       | 184/729 [00:01<00:05, 104.34it/s]Loading weights:  27%|██▋       | 197/729 [00:02<00:04, 110.33it/s]Loading weights:  29%|██▊       | 209/729 [00:02<00:05, 103.47it/s]Loading weights:  30%|███       | 222/729 [00:02<00:04, 102.11it/s]Loading weights:  32%|███▏      | 236/729 [00:02<00:04, 111.80it/s]Loading weights:  34%|███▍      | 248/729 [00:02<00:04, 111.16it/s]Loading weights:  36%|███▌      | 260/729 [00:02<00:04, 112.29it/s]Loading weights:  37%|███▋      | 272/729 [00:02<00:04, 101.99it/s]Loading weights:  39%|███▉      | 283/729 [00:02<00:04, 102.92it/s]Loading weights:  40%|████      | 294/729 [00:02<00:04, 103.12it/s]Loading weights:  42%|████▏     | 306/729 [00:03<00:03, 106.50it/s]Loading weights:  43%|████▎     | 317/729 [00:03<00:04, 96.51it/s] Loading weights:  45%|████▌     | 330/729 [00:03<00:03, 101.36it/s]Loading weights:  59%|█████▉    | 429/729 [00:03<00:00, 337.74it/s]Loading weights:  73%|███████▎  | 533/729 [00:03<00:00, 529.24it/s]Loading weights:  87%|████████▋ | 635/729 [00:03<00:00, 665.71it/s]Loading weights: 100%|█████████▉| 726/729 [00:03<00:00, 729.49it/s]Loading weights: 100%|██████████| 729/729 [00:03<00:00, 196.64it/s]
+[qwen2.5-vl-7b] answer tokens: Yes=9454 No=2753 variants={' Yes': 7414, ' No': 2308, 'yes': 9693, 'no': 2152} | vision_start=151652 vision_end=151653 | image size={'longest_edge': 200704, 'shortest_edge': 3136} | attn=sdpa
+50/3180  0.24s/q  errors=0
+100/3180  0.31s/q  errors=0
+150/3180  0.36s/q  errors=0
+200/3180  0.32s/q  errors=0
+250/3180  0.33s/q  errors=0
+300/3180  0.36s/q  errors=0
+350/3180  0.33s/q  errors=0
+400/3180  0.33s/q  errors=0
+450/3180  0.35s/q  errors=0
+500/3180  0.33s/q  errors=0
+550/3180  0.33s/q  errors=0
+600/3180  0.34s/q  errors=0
+650/3180  0.34s/q  errors=0
+700/3180  0.33s/q  errors=0
+750/3180  0.34s/q  errors=0
+800/3180  0.34s/q  errors=0
+850/3180  0.33s/q  errors=0
+900/3180  0.34s/q  errors=0
+950/3180  0.34s/q  errors=0
+1000/3180  0.34s/q  errors=0
+1050/3180  0.34s/q  errors=0
+1100/3180  0.34s/q  errors=0
+1150/3180  0.34s/q  errors=0
+1200/3180  0.34s/q  errors=0
+1250/3180  0.34s/q  errors=0
+1300/3180  0.34s/q  errors=0
+1350/3180  0.34s/q  errors=0
+1400/3180  0.34s/q  errors=0
+1450/3180  0.34s/q  errors=0
+1500/3180  0.34s/q  errors=0
+1550/3180  0.34s/q  errors=0
+1600/3180  0.34s/q  errors=0
+1650/3180  0.34s/q  errors=0
+1700/3180  0.34s/q  errors=0
+1750/3180  0.34s/q  errors=0
+1800/3180  0.34s/q  errors=0
+1850/3180  0.34s/q  errors=0
+1900/3180  0.34s/q  errors=0
+1950/3180  0.34s/q  errors=0
+2000/3180  0.34s/q  errors=0
+2050/3180  0.34s/q  errors=0
+2100/3180  0.34s/q  errors=0
+2150/3180  0.34s/q  errors=0
+2200/3180  0.34s/q  errors=0
+2250/3180  0.34s/q  errors=0
+2300/3180  0.34s/q  errors=0
+2350/3180  0.34s/q  errors=0
+2400/3180  0.34s/q  errors=0
+2450/3180  0.34s/q  errors=0
+2500/3180  0.34s/q  errors=0
+2550/3180  0.34s/q  errors=0
+2600/3180  0.34s/q  errors=0
+2650/3180  0.34s/q  errors=0
+2700/3180  0.34s/q  errors=0
+2750/3180  0.34s/q  errors=0
+2800/3180  0.34s/q  errors=0
+2850/3180  0.34s/q  errors=0
+2900/3180  0.34s/q  errors=0
+2950/3180  0.34s/q  errors=0
+3000/3180  0.34s/q  errors=0
+3050/3180  0.34s/q  errors=0
+3100/3180  0.34s/q  errors=0
+3150/3180  0.34s/q  errors=0
+3180/3180  0.34s/q  errors=0

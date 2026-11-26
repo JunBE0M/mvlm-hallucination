@@ -6,7 +6,13 @@
 (Qwen2.5-VL 3B/7B, COCO)을 다룬다. 가설: 모델이 이미지 간 정보를 min(∀)이 아니라 max/mean(∃)으로 집계하고,
 마지막 토큰의 attention이 객체가 없는 이미지를 오히려 덜 본다.
 
-## 현재 상태와 다음 할 일 (2026-11-24)
+## 업데이트 (2026-11-26): 5개 모델 확장 완료
+- Qwen3-VL-8B, InternVL3-8B, LLaVA-OneVision-7B 구현(`GenericVLM`) 후 E1·M1·M2·M0·E3·질문 변형·N=12/16·작은 물체·logit lens 실행.
+- **A2 양화사 비대칭(∃=max, ∀=mean)이 5개 모델 × 모든 문장 변형에서 재현**, Δ∝N^−γ는 4개 모델에서 γ≈1.3–1.5 (Qwen3-VL만 0.5).
+- M2는 4개 모델에서 base 대비 ∀ AUC +.11–.25, Qwen3-VL에서는 효과 없음.
+- 자세한 결과와 해석: [EXPERIMENTS.md](EXPERIMENTS.md) "실험 기록 2". 다음 할 일: Qwen3-VL에서 M2가 안 통하는 이유, 라벨 없는 M2 임계값, 공개 벤치마크(MIOH, MIHBench)·기존 방법(VCD, PAI) 비교.
+
+## 이전 상태와 다음 할 일 (2026-11-24)
 
 ### 새 인스턴스 조건
 - **VRAM**: 최소 24GB(7–8B 모델, N≤8). N=16 이상이나 8B급 모델까지 하려면 **32–48GB 권장**. 이전 실험은 RTX 5090 32GB에서 돌렸다.
@@ -170,7 +176,7 @@ npz는 임시파일 → `os.replace`로 원자적 저장, csv와 npz가 모두 �
 | 기타 | processor import 시 torchvision 필요. `qwen-vl-utils` 불필요 |
 
 ## 확인 필요 (추측 금지)
-- 확장 모델 Qwen3-VL-8B, InternVL3-8B, LLaVA-OneVision-7B: HF repo id, transformers 클래스명, 필요 transformers 버전,
-  이미지 구간 경계 토큰은 **확인 필요**. 현재는 `MODEL_REGISTRY`에 이름만 있고 로드 시 `NotImplementedError`.
+- (해결, 2026-11-26) 확장 모델은 transformers 5.22.2 `AutoModelForImageTextToText`로 로드: `Qwen/Qwen3-VL-8B-Instruct`,
+  `OpenGVLab/InternVL3-8B-hf`, `llava-hf/llava-onevision-qwen2-7b-ov-hf`. 셋 다 Yes=9454/No=2753, 구간 토큰은 `GenericVLM` docstring 참고.
 - Vast: PyPI의 `torch==2.14.1` Linux 휠이 요구하는 CUDA 드라이버 버전은 확인 필요 → `setup.sh` 출력의 `cuda: True` 확인.
   Vast 템플릿에 다른 torch가 깔려 있으면 pip이 교체한다.

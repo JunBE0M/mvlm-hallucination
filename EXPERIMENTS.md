@@ -1,4 +1,93 @@
-# 실험 기록 (2026-11-22, Vast.ai RTX 5090)
+# 실험 기록 2: 5개 모델 확장 (2026-11-26, Vast.ai RTX 4090 48GB ×4)
+
+모델 5개: Qwen2.5-VL-3B/7B, **Qwen3-VL-8B, InternVL3-8B, LLaVA-OneVision-7B**(새로 `MODEL_REGISTRY`에 구현, `src/models.py` `GenericVLM`).
+같은 COCO 문항(셀당 200문항), 같은 지표 m = logit("Yes") − logit("No"). 집계 분석은 `python -m src.agg_multi` → `results/multi/*.csv`, 요약 출력 `results/multi_summary.txt`,
+그림은 `python -m src.plot_multi` → `results/figs/multi_*.png`. 실행 큐: `logs/queue_gen.sh`(단계별), `logs/launch_*.sh`, `logs/sched_extra.sh`.
+
+**모델별 입력 설정 (공정 비교용)**
+- Qwen2.5-VL: max_pixels 448², Qwen3-VL: 같은 픽셀 상한(이미지당 약 190토큰).
+- InternVL3: `crop_to_patches=False` → 이미지당 448px 타일 1개(256토큰).
+- LLaVA-OV: 다중 이미지는 anyres 없이 base 384px(730토큰, 원 논문 multi-image 설정). 단일 이미지(M1)는 모델 기본 anyres.
+- 재현 확인: Qwen2.5-VL E1을 RTX 5090 → 4090에서 다시 돌려 답 일치 98.7%/99.3%, m 상관 0.999.
+
+## 0. 한눈에 보는 결론 (논문 주장 후보)
+
+1. **현상은 5개 모델 모두에서 나온다.** ∀ 질문 AUC가 N과 함께 떨어진다 (N=2 → 8 → 16).
+   Qwen2.5-3B .84→.61→.53, Qwen2.5-7B .88→.65→.56, Qwen3-VL .95→.78→.70, InternVL3 .97→.69→.58, LLaVA-OV .94→.66→.55.
+   ∃ 질문은 같은 N에서도 AUC .94–.99를 유지한다.
+2. **Δ ∝ N^−γ (1/N 희석).** γ(N=2–16) = 1.47 / 1.31 / **0.52** / 1.50 / 1.41. 문항 단위로도 "평균 모형"이 가장 잘 맞는다
+   (R² .46 / .58 / .36 / .75 / .70; 희석 없는 모형 .04–.21, min 모형 .09–.44).
+   예외는 Qwen3-VL: 희석이 약하고(γ≈0.5) min 모형 R²(.44)가 평균 모형(.36)보다 약간 높다. 그래도 ∀ AUC는 N=16에서 .70까지 떨어진다.
+3. **양화사 비대칭 (가장 새로운 결과): ∃는 max로, ∀는 평균으로 합친다. 5개 모델 × 모든 문장 변형에서 재현.**
+   정규화 집계 온도 β·sd(e) (<0 max 쪽, 0 평균, >0 min 쪽):
+   ∃ −2.7 / −2.9 / −5.7 / −3.5 / −9.2 (R² .91–.92), ∀ −0.51 / −0.11 / +0.35 / −0.07 / −0.03.
+   ¬∃("none")도 max 쪽(−1.5 / −0.9 / −5.7 / −1.1 / −2.9). 문장을 바꿔도(all_contain, every_show, atleast1, any_show) 같다.
+   모델은 "하나라도"에는 올바른 연산자(max)로 전환하지만 "모두"에는 min으로 전환하지 못한다.
+4. **비대칭은 판독이 생기는 중·후반 층에서 동시에 형성된다 (logit lens).** 층별로 읽은 m이 판별력을 갖기 시작하는 지점(상대 깊이 약 0.6–0.7)부터
+   ∃는 β<0(max)로 가고 ∀는 끝까지 β≈0(평균)에 머문다 (`multi_lens_beta.png`).
+5. **인과 검증 (E3, 5개 모델).** absent 이미지 attention ×4 → 거짓 Yes 감소 (전체 N: .45→.40, .26→.09, .14→.02, .47→.27, .17→.05),
+   ×0(가림) → 증가 (.58, .44, .39, .64, .32). 방향이 모든 모델에서 예측과 같다. 대조(present ×4)는 오히려 Yes 쪽.
+6. **해결책 M2 (같은 입력·같은 프롬프트, 이미지별 격리 판독 후 min).** ∀ AUC(N=2–8):
+   base .66/.74/.84/.79/.76 → **M2 .91/.93/.83/.95/.93** (4개 모델에서 p<.001, paired bootstrap).
+   **Qwen3-VL에서는 개선 없음**(.83 vs .84, p=.10). M0(부정 질문)은 +.01–.10.
+   M1_min(이미지마다 따로 묻기, 상한선) .97–.99.
+7. **견고성**: 작은 물체(bbox 면적 ≤5%)에서도 같은 패턴(∀ AUC N=8: .54/.58/.66/.61, ∃ .94–.95; ∀ β≈0, ∃ β<0).
+
+## 1. 결과 표
+
+### 행동 (forall, N=2 / 8 / 16)
+| 모델 | 거짓 Yes (forall_no) | d′ | ∀ AUC | ∃ AUC |
+|---|---|---|---|---|
+| Qwen2.5-VL-3B | .14 / .82 / .97 | 1.45 / .28 / .07 | .84 / .61 / .53 | .99 / .97 / .94 |
+| Qwen2.5-VL-7B | .27 / .35 / .25 | 1.50 / .53 / .25 | .88 / .65 / .56 | .99 / .98 / .95 |
+| Qwen3-VL-8B | .04 / .14 / .25 | 2.64 / 1.31 / .74 | .95 / .78 / .70 | .99 / .99 / .97 |
+| InternVL3-8B | .02 / .77 / .94 | 2.91 / .59 / .19 | .97 / .69 / .58 | 1.00 / .98 / .97 |
+| LLaVA-OV-7B | .01 / .34 / .54 | 2.47 / .59 / .15 | .94 / .66 / .55 | .99 / .97 / .96 |
+
+Yes 편향 방향은 모델마다 다르다(3B·InternVL은 Yes, Qwen3-VL·7B는 No 쪽). 공통점은 **판별력(d′, AUC) 붕괴**다.
+
+### 질문 문장 변형 (N=8 AUC)
+| 모델 | ∀ all_contain | ∀ every_show | ∃ atleast1 | ∃ any_show | ¬∃ none |
+|---|---|---|---|---|---|
+| Qwen2.5-VL-3B | .61 | .61 | .97 | .98 | .91 |
+| Qwen2.5-VL-7B | .65 | .64 | .98 | .98 | .98 |
+| Qwen3-VL-8B | .77 | .75 | .99 | .99 | .98 |
+| InternVL3-8B | .69 | .69 | .98 | .98 | .97 |
+| LLaVA-OV-7B | .67 | .66 | .97 | .97 | .97 |
+
+### 방법 비교 ∀ AUC (N=2–8 전체, 95% CI는 `results/multi/methods.csv`)
+| 모델 | base | M0 부정 질문 | M1_mean | **M2 격리 판독** | M1_min (상한) |
+|---|---|---|---|---|---|
+| Qwen2.5-VL-3B | .663 | .713 | .864 | **.913** | .970 |
+| Qwen2.5-VL-7B | .739 | .836 | .848 | **.928** | .982 |
+| Qwen3-VL-8B | .844 | .849 | .867 | .831 | .987 |
+| InternVL3-8B | .791 | .840 | .896 | **.953** | .989 |
+| LLaVA-OV-7B | .763 | .817 | .881 | **.927** | .989 |
+
+N=12/16에서 M2: Qwen2.5-3B .78/.76, 7B .86/.84 (base .54/.53, .60/.56). Qwen3-VL·InternVL의 N=12/16 M2는 재실행 중이라 표에서 제외.
+
+## 2. 해석과 한계
+- 주장 구조: (현상) 다중 이미지 ∀ 환각 → (법칙) Δ∝1/N → (메커니즘) 양화사 비대칭: ∃=max, ∀=mean, 중·후반 층에서 형성 → (인과) attention 개입 → (해결) M2.
+- **Qwen3-VL이 예외**다: 희석이 약하고(γ≈0.5) M2도 효과가 없다. 대신 ∀ β가 약간 min 쪽(+0.35)이다.
+  "최신 모델은 부분적으로 min 쪽으로 이동했지만 ∃ 수준의 연산자 전환에는 못 미친다"로 쓸 수 있다. M2가 안 통하는 이유는 추가 분석 필요(이미지별 m의 스케일·임계값 문제 가능).
+- M2는 임계값 0에서 No 쪽으로 쏠리는 문제가 그대로다(라벨 없는 보정 미해결).
+- 데이터는 COCO 한 종류, 클래스 20개. 공개 벤치마크(MIOH, MIHBench)와 기존 방법(VCD, PAI) 비교는 아직이다.
+- lens의 β는 판독이 우연 수준인 층(AUC<0.6)에서는 의미가 없어서 그림에서 가렸다.
+
+## 3. 재현
+```bash
+python -m src.make_neg; python -m src.make_variants
+python -m src.data --config configs/bigN.yaml  --out data/questions_bigN.jsonl
+python -m src.data --config configs/small.yaml --out data/questions_small.jsonl
+CUDA_VISIBLE_DEVICES=0 bash logs/queue_gen.sh qwen3-vl-8b qwen3vl8b e1 m1 m2 m0 var big m1big e3 lens small m1small m2big
+python -m src.agg_multi --out_dir results/multi > results/multi_summary.txt
+python -m src.plot_multi
+```
+주의: GPU당 8B 모델 프로세스 2개까지(3개 이상은 OOM). LLaVA-OV 단일 이미지(M1)는 anyres라 0.65s/장으로 느리다(`per_image --shard i/k`로 분할).
+
+---
+
+# 실험 기록 1: Qwen2.5-VL (2026-11-22, Vast.ai RTX 5090)
 
 Qwen2.5-VL 3B/7B, COCO val2017. 문항은 20개 클래스 × N∈{2,4,6,8} × 유형별 10개이고, 한 셀(model × N × qtype)당 200문항이다.
 지표 m = logit("Yes") − logit("No") (마지막 위치), pred = Yes if m > 0.

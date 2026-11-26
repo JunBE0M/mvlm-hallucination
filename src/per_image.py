@@ -37,6 +37,10 @@ def run_single(args):
                                        present=int(pos in q["present_positions"])))
     with ResumableCsvWriter(args.out, SINGLE_COLS, key="key", flush_every=50) as w:
         todo = [it for k, it in items.items() if k not in w.done]
+        if args.shard:
+            i, k = map(int, args.shard.split("/"))
+            import zlib
+            todo = [it for it in todo if zlib.crc32(it["key"].encode()) % k == i]
         print(f"{len(items)} unique (cls, image) pairs, {len(todo)} to run", flush=True)
         if not todo:
             return
@@ -84,6 +88,7 @@ def main(argv=None):
     ap.add_argument("--out", required=True)
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--aggregate", action="store_true")
+    ap.add_argument("--shard", default=None, help="i/k: crc32(key) %% k == i 인 항목만 (여러 GPU 분할, 출력 파일은 따로)")
     ap.add_argument("--single", default=None, help="--aggregate 시 단일 이미지 결과 csv")
     args = ap.parse_args(argv)
     aggregate(args) if args.aggregate else run_single(args)

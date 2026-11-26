@@ -32,10 +32,10 @@ class ModelSpec:
 MODEL_REGISTRY: dict[str, ModelSpec] = {
     "qwen2.5-vl-3b": ModelSpec("qwen2_5_vl", "Qwen/Qwen2.5-VL-3B-Instruct"),
     "qwen2.5-vl-7b": ModelSpec("qwen2_5_vl", "Qwen/Qwen2.5-VL-7B-Instruct"),
-    # TODO: 아래 3개는 HF repo id / transformers 클래스명 / 필요 버전 확인 필요 (README 참고)
-    "qwen3-vl-8b": ModelSpec("qwen3_vl", None),
-    "internvl3-8b": ModelSpec("internvl3", None),
-    "llava-onevision-7b": ModelSpec("llava_onevision", None),
+    # transformers 5.22.2 에서 확인 (2026-11-25): 클래스는 AutoModelForImageTextToText 로 로드.
+    "qwen3-vl-8b": ModelSpec("qwen3_vl", "Qwen/Qwen3-VL-8B-Instruct"),          # Qwen3VLForConditionalGeneration
+    "internvl3-8b": ModelSpec("internvl3", "OpenGVLab/InternVL3-8B-hf"),         # InternVLForConditionalGeneration
+    "llava-onevision-7b": ModelSpec("llava_onevision", "llava-hf/llava-onevision-qwen2-7b-ov-hf"),
 }
 
 
@@ -176,6 +176,109 @@ class QwenVL25(BaseVLM):
         return self.model.config.text_config.num_attention_heads
 
 
+class GenericVLM(QwenVL25):
+    """Qwen3-VL / InternVL3(-hf) / LLaVA-OneVision(-hf). 셋 다 Qwen 계열 tokenizer 라
+    "Yes"=9454 / "No"=2753, chat template 이 "<|im_start|>assistant\n" 으로 끝난다 (직접 확인).
+
+    이미지 구간:
+      qwen3_vl        : <|vision_start|> ... <|vision_end|>  (Qwen2.5-VL 과 동일)
+      internvl3       : <img> <IMG_CONTEXT>*256 </img>.  processor 호출 시 crop_to_patches=False -> 이미지당 448px 타일 1개
+      llava_onevision : <image> 토큰 연속 구간 (경계 마커 없음). images 를 [[...]] 로 넘기면 다중 이미지 =
+                        anyres 없이 base 384px (원 논문 multi-image 설정), 단일 이미지는 anyres (모델 기본 동작).
+                        이미지들이 붙어 있으므로 연속 구간을 N 등분 (다중 이미지 base 모드는 이미지당 토큰 수 동일).
+    """
+
+    def __init__(self, name: str, hf_id: str, family: str, attn_impl: str = "sdpa", dtype: str = "bfloat16",
+                 max_pixels: int | None = 448 * 448, min_pixels: int | None = None, device: str = "cuda",
+                 model=None, processor=None, image_labels: bool = False):
+        import torch
+        from transformers import AutoModelForImageTextToText, AutoProcessor
+        self._torch = torch
+        self.family = family
+        self.image_labels = image_labels
+        self.name, self.hf_id, self.device = name, hf_id, device
+        if model is None:
+            model = AutoModelForImageTextToText.from_pretrained(
+                hf_id, dtype=getattr(torch, dtype), attn_implementation=attn_impl, device_map=device)
+        self.model = model.eval()
+        self.processor = processor if processor is not None else AutoProcessor.from_pretrained(hf_id)
+        tok = self.processor.tokenizer
+        lm = self.model.model.language_model
+        self._text_attn_ids = {id(m) for m in lm.modules() if hasattr(m, "layer_idx") and hasattr(m, "q_proj")}
+        if family == "qwen3_vl":
+            default = self.processor.image_processor.size
+            self.size = {"longest_edge": max_pixels if max_pixels is not None else default.longest_edge,
+                         "shortest_edge": min_pixels if min_pixels is not None else default.shortest_edge}
+            self._call_kw = {"size": self.size}
+            self.vision_start_id = tok.convert_tokens_to_ids("<|vision_start|>")
+            self.vision_end_id = tok.convert_tokens_to_ids("<|vision_end|>")
+        elif family == "internvl3":
+            self.size = {"longest_edge": 448 * 448, "shortest_edge": None}
+            self._call_kw = {"crop_to_patches": False}
+            self.vision_start_id = tok.convert_tokens_to_ids("<img>")
+            self.vision_end_id = tok.convert_tokens_to_ids("</img>")
+        elif family == "llava_onevision":
+            self.size = {"longest_edge": 384 * 384, "shortest_edge": None}
+            self._call_kw = {}
+            self.vision_start_id = self.vision_end_id = None
+            self.image_token_id = self.processor.image_token_id
+        else:
+            raise ValueError(family)
+        self.im_start_id = tok.convert_tokens_to_ids("<|im_start|>")
+        self.answer_tokens = AnswerTokens(
+            yes=_single_token_id(tok, "Yes"), no=_single_token_id(tok, "No"),
+            variants={s: _single_token_id(tok, s) for s in (" Yes", " No", "yes", "no")},
+        )
+        print(f"[{name}] family={family} Yes={self.answer_tokens.yes} No={self.answer_tokens.no} "
+              f"call_kw={self._call_kw} attn={attn_impl} text_attn_modules={len(self._text_attn_ids)}")
+
+    def build_inputs(self, images, question: str) -> dict:
+        text = self.chat_text(len(images), question)
+        imgs = [list(images)] if self.family == "llava_onevision" else list(images)
+        inputs = self.processor(text=[text], images=imgs, return_tensors="pt", **self._call_kw)
+        return inputs.to(self.model.device)
+
+    def forward_last_logits(self, inputs):
+        torch = self._torch
+        with torch.inference_mode():
+            hidden = self.model.model(**inputs, use_cache=False)[0][0, -1]
+            if getattr(self, "_lm_head_fp32", None) is None:
+                self._lm_head_fp32 = self.model.lm_head.weight.detach().float()
+            logits = torch.nn.functional.linear(hidden.float(), self._lm_head_fp32)
+        return logits.cpu()
+
+    def segments(self, inputs) -> Segments:
+        ids = inputs["input_ids"][0].tolist()
+        if self.family != "llava_onevision":
+            return split_segments(ids, self.vision_start_id, self.vision_end_id, self.im_start_id)
+        import numpy as np
+        pos = [i for i, t in enumerate(ids) if t == self.image_token_id]
+        n_img = int(inputs["batch_num_images"][0]) if "batch_num_images" in inputs else 1
+        runs = []
+        for i in pos:
+            if runs and runs[-1][1] == i:
+                runs[-1][1] = i + 1
+            else:
+                runs.append([i, i + 1])
+        if len(runs) != 1:
+            raise ValueError(f"expected one contiguous <image> run, got {len(runs)}")
+        s0, e0 = runs[0]
+        if (e0 - s0) % n_img:
+            raise ValueError(f"image run {e0 - s0} not divisible by {n_img}")
+        k = (e0 - s0) // n_img
+        spans = [(s0 + j * k, s0 + (j + 1) * k) for j in range(n_img)]
+        n = n_img
+        labels = np.full(len(ids), n, dtype=np.int64)
+        ims = [i for i in range(s0) if ids[i] == self.im_start_id]
+        labels[:ims[-1] if ims else 0] = n + 1
+        for j, (a, b) in enumerate(spans):
+            labels[a:b] = j
+        return Segments(spans, labels, n)
+
+    def is_text_attention(self, module) -> bool:
+        return id(module) in self._text_attn_ids
+
+
 class _TodoVLM(BaseVLM):
     def __init__(self, name, *a, **k):
         raise NotImplementedError(
@@ -183,7 +286,7 @@ class _TodoVLM(BaseVLM):
             f"chat template의 이미지 구간 토큰을 소스에서 확인한 뒤 구현할 것 (README 'TODO' 참고).")
 
 
-_FAMILY = {"qwen2_5_vl": QwenVL25, "qwen3_vl": _TodoVLM, "internvl3": _TodoVLM, "llava_onevision": _TodoVLM}
+_FAMILY = {"qwen2_5_vl": QwenVL25, "qwen3_vl": GenericVLM, "internvl3": GenericVLM, "llava_onevision": GenericVLM}
 
 
 def load_model(name: str, attn_impl: str = "sdpa", **kwargs) -> BaseVLM:
@@ -193,6 +296,8 @@ def load_model(name: str, attn_impl: str = "sdpa", **kwargs) -> BaseVLM:
     cls = _FAMILY[spec.family]
     if cls is _TodoVLM:
         return cls(name)
+    if cls is GenericVLM:
+        return cls(name, spec.hf_id, spec.family, attn_impl=attn_impl, **kwargs)
     return cls(name, spec.hf_id, attn_impl=attn_impl, **kwargs)
 
 

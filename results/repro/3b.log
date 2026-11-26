@@ -1,0 +1,67 @@
+3200 questions, 20 already done, 3180 to run
+Loading weights:   0%|          | 0/824 [00:00<?, ?it/s]Loading weights:   3%|▎         | 23/824 [00:00<00:03, 228.18it/s]Loading weights:   6%|▋         | 52/824 [00:00<00:03, 241.01it/s]Loading weights:   9%|▉         | 77/824 [00:00<00:03, 243.30it/s]Loading weights:  12%|█▎        | 103/824 [00:00<00:02, 249.65it/s]Loading weights:  17%|█▋        | 136/824 [00:00<00:02, 270.17it/s]Loading weights:  20%|█▉        | 163/824 [00:00<00:02, 259.48it/s]Loading weights:  24%|██▎       | 195/824 [00:00<00:02, 272.10it/s]Loading weights:  27%|██▋       | 223/824 [00:00<00:02, 253.20it/s]Loading weights:  30%|███       | 249/824 [00:00<00:02, 246.43it/s]Loading weights:  34%|███▍      | 280/824 [00:01<00:02, 257.88it/s]Loading weights:  37%|███▋      | 306/824 [00:01<00:02, 245.75it/s]Loading weights:  41%|████      | 339/824 [00:01<00:01, 260.46it/s]Loading weights:  44%|████▍     | 366/824 [00:01<00:01, 246.83it/s]Loading weights:  47%|████▋     | 391/824 [00:01<00:01, 240.87it/s]Loading weights:  51%|█████▏    | 424/824 [00:01<00:01, 264.16it/s]Loading weights:  62%|██████▏   | 513/824 [00:01<00:00, 439.31it/s]Loading weights:  75%|███████▌  | 620/824 [00:01<00:00, 616.31it/s]Loading weights:  88%|████████▊ | 724/824 [00:01<00:00, 734.27it/s]Loading weights: 100%|█████████▉| 820/824 [00:02<00:00, 793.18it/s]Loading weights: 100%|██████████| 824/824 [00:02<00:00, 397.02it/s]
+[qwen2.5-vl-3b] answer tokens: Yes=9454 No=2753 variants={' Yes': 7414, ' No': 2308, 'yes': 9693, 'no': 2152} | vision_start=151652 vision_end=151653 | image size={'longest_edge': 200704, 'shortest_edge': 3136} | attn=sdpa
+50/3180  0.20s/q  errors=0
+100/3180  0.25s/q  errors=0
+150/3180  0.29s/q  errors=0
+200/3180  0.26s/q  errors=0
+250/3180  0.26s/q  errors=0
+300/3180  0.29s/q  errors=0
+350/3180  0.27s/q  errors=0
+400/3180  0.27s/q  errors=0
+450/3180  0.28s/q  errors=0
+500/3180  0.27s/q  errors=0
+550/3180  0.27s/q  errors=0
+600/3180  0.28s/q  errors=0
+650/3180  0.27s/q  errors=0
+700/3180  0.27s/q  errors=0
+750/3180  0.27s/q  errors=0
+800/3180  0.28s/q  errors=0
+850/3180  0.27s/q  errors=0
+900/3180  0.27s/q  errors=0
+950/3180  0.28s/q  errors=0
+1000/3180  0.27s/q  errors=0
+1050/3180  0.27s/q  errors=0
+1100/3180  0.28s/q  errors=0
+1150/3180  0.27s/q  errors=0
+1200/3180  0.27s/q  errors=0
+1250/3180  0.28s/q  errors=0
+1300/3180  0.27s/q  errors=0
+1350/3180  0.27s/q  errors=0
+1400/3180  0.28s/q  errors=0
+1450/3180  0.27s/q  errors=0
+1500/3180  0.27s/q  errors=0
+1550/3180  0.27s/q  errors=0
+1600/3180  0.28s/q  errors=0
+1650/3180  0.27s/q  errors=0
+1700/3180  0.27s/q  errors=0
+1750/3180  0.28s/q  errors=0
+1800/3180  0.27s/q  errors=0
+1850/3180  0.27s/q  errors=0
+1900/3180  0.28s/q  errors=0
+1950/3180  0.27s/q  errors=0
+2000/3180  0.27s/q  errors=0
+2050/3180  0.28s/q  errors=0
+2100/3180  0.27s/q  errors=0
+2150/3180  0.27s/q  errors=0
+2200/3180  0.27s/q  errors=0
+2250/3180  0.27s/q  errors=0
+2300/3180  0.27s/q  errors=0
+2350/3180  0.27s/q  errors=0
+2400/3180  0.28s/q  errors=0
+2450/3180  0.27s/q  errors=0
+2500/3180  0.27s/q  errors=0
+2550/3180  0.28s/q  errors=0
+2600/3180  0.27s/q  errors=0
+2650/3180  0.27s/q  errors=0
+2700/3180  0.28s/q  errors=0
+2750/3180  0.27s/q  errors=0
+2800/3180  0.27s/q  errors=0
+2850/3180  0.28s/q  errors=0
+2900/3180  0.28s/q  errors=0
+2950/3180  0.27s/q  errors=0
+3000/3180  0.28s/q  errors=0
+3050/3180  0.28s/q  errors=0
+3100/3180  0.27s/q  errors=0
+3150/3180  0.28s/q  errors=0
+3180/3180  0.28s/q  errors=0
