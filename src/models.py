@@ -54,6 +54,33 @@ def _single_token_id(tokenizer, s: str) -> int:
     return ids[0]
 
 
+def text_attention_modules(model):
+    """언어모델 self-attention 클래스와 모듈 id 집합.
+
+    transformers 5.22.2 소스 확인 (2026-11-26):
+      qwen3_vl        : model.model.language_model = Qwen3VLTextModel, layers[i].self_attn = Qwen3VLTextAttention
+                        (비전: model.model.visual 의 Qwen3VLVisionAttention)
+      internvl3 (-hf) : language_model = AutoModel(text_config, model_type=qwen2) = Qwen2Model -> Qwen2Attention
+                        (비전: vision_tower 의 InternVLVisionAttention)
+      llava_onevision : language_model = Qwen2Model -> Qwen2Attention (비전: vision_tower 의 SigLIP attention)
+      qwen2_5_vl      : Qwen2_5_VLAttention (비전: Qwen2_5_VLVisionAttention)
+    모두 ALL_ATTENTION_FUNCTIONS.get_interface(...)(module, q, k, v, mask, scaling=...) 로 호출한다.
+    클래스는 language_model.layers[i].self_attn 에서 직접 가져오고, 층 수와 비전 쪽 비중복을 확인한다."""
+    lm = model.model.language_model
+    mods = [layer.self_attn for layer in lm.layers]
+    classes = {type(m) for m in mods}
+    if len(classes) != 1:
+        raise RuntimeError(f"mixed text attention classes: {classes}")
+    cls = classes.pop()
+    n_layers = model.config.text_config.num_hidden_layers
+    if len(mods) != n_layers or sorted(m.layer_idx for m in mods) != list(range(n_layers)):
+        raise RuntimeError(f"text attention modules {len(mods)} != num_hidden_layers {n_layers}")
+    all_of_cls = [m for m in model.modules() if isinstance(m, cls)]
+    if len(all_of_cls) != n_layers:   # 비전 인코더가 같은 클래스를 쓰면 isinstance 판별이 깨진다
+        raise RuntimeError(f"{cls.__name__} used outside the language model ({len(all_of_cls)} vs {n_layers})")
+    return cls, {id(m) for m in mods}
+
+
 class BaseVLM:
     name: str
     model: object
@@ -203,8 +230,7 @@ class GenericVLM(QwenVL25):
         self.model = model.eval()
         self.processor = processor if processor is not None else AutoProcessor.from_pretrained(hf_id)
         tok = self.processor.tokenizer
-        lm = self.model.model.language_model
-        self._text_attn_ids = {id(m) for m in lm.modules() if hasattr(m, "layer_idx") and hasattr(m, "q_proj")}
+        self._attn_cls, self._text_attn_ids = text_attention_modules(self.model)
         if family == "qwen3_vl":
             default = self.processor.image_processor.size
             self.size = {"longest_edge": max_pixels if max_pixels is not None else default.longest_edge,
@@ -230,7 +256,8 @@ class GenericVLM(QwenVL25):
             variants={s: _single_token_id(tok, s) for s in (" Yes", " No", "yes", "no")},
         )
         print(f"[{name}] family={family} Yes={self.answer_tokens.yes} No={self.answer_tokens.no} "
-              f"call_kw={self._call_kw} attn={attn_impl} text_attn_modules={len(self._text_attn_ids)}")
+              f"call_kw={self._call_kw} attn={attn_impl} text_attn={self._attn_cls.__name__}"
+              f" x{len(self._text_attn_ids)}")
 
     def build_inputs(self, images, question: str) -> dict:
         text = self.chat_text(len(images), question)
@@ -276,7 +303,7 @@ class GenericVLM(QwenVL25):
         return Segments(spans, labels, n)
 
     def is_text_attention(self, module) -> bool:
-        return id(module) in self._text_attn_ids
+        return isinstance(module, self._attn_cls) and id(module) in self._text_attn_ids
 
 
 class _TodoVLM(BaseVLM):
