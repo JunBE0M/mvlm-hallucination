@@ -386,6 +386,22 @@ def eval_E(tags, out):
         preds["M2_GMM(no label)"] = sA > 0
         base = e1[e1.qtype.str.startswith("forall")].set_index("qid").m.reindex(m2.qid).to_numpy()
         preds["base_thr0"] = base > 0
+        # 후속: ∀ 이미지 묶음을 ∃ 문장으로 격리 판독 -> min (m2exq). 같은 per-class ∃ 보정 임계값도 적용
+        xq = read(f"{RAW}/m2exq_post_{tag}.csv")
+        if xq is not None:
+            xs = xq.assign(qid=xq.qid.str.replace("__exq", "", regex=False)).set_index("qid").m_min.reindex(m2.qid)
+            if xs.notna().all():
+                xs = xs.to_numpy()
+                preds["M2exq_min_thr0(no label)"] = xs > 0
+                pc2 = np.zeros(len(m2), bool)
+                for r in [r for r in rows_t if r["model"] == model and r["scope"] == "per_class"]:
+                    sel = (m2.cls == r["cls"]).to_numpy()
+                    pc2[sel] = xs[sel] > r["t"]
+                preds["M2exq_min_E_perclass(no label)"] = pc2
+                preds["M2exq_min_LOCO(label)"] = A.loco_threshold(m2, xs)
+                ys = (m2.qtype == "forall_yes").to_numpy()
+                rows_t.append(dict(model=model, cls="auc", t=A.auc(xs[ys], xs[~ys]), agreement=np.nan,
+                                   scope="M2exq_min_AUC(N2-8)"))
         for name, p in preds.items():
             rows += [{**r, "model": model} for r in A.metr(m2, p, model, name)]
     T = pd.DataFrame(rows)

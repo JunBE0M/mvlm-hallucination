@@ -17,7 +17,7 @@ PY
             run python -m src.distill train --model $M --teacher $R/B_teacher_${T}.csv --loss $L --out_dir ckpt/B_${T}_$L
             mkdir -p results/novelty/B_train; cp ckpt/B_${T}_$L/train_log.csv results/novelty/B_train/${T}_$L.csv
             cp ckpt/B_${T}_$L/train_config.json results/novelty/B_train/${T}_$L.json ;;
-  eval_*)   L=${s#eval_}; A=ckpt/B_${T}_$L/${EPOCH:-epoch2}; S=${T}_${L}_${EPOCH:-epoch2}
+  eval_*)   L=${s#eval_}; A=ckpt/B_${T}_$L/${EPOCH:-epoch1}; S=${T}_${L}_${EPOCH:-epoch1}
             run python -m src.run_eval --model $M --adapter $A --questions data/heldout_questions.jsonl --out $R/B_e1_$S.csv
             run python -m src.per_image --model $M --adapter $A --questions data/heldout_questions.jsonl --out $R/B_m1_$S.csv
             run python -m src.run_eval --model $M --adapter $A --questions data/heldout_bigN.jsonl --out $R/B_e1big_$S.csv

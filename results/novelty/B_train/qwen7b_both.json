@@ -1,0 +1,36 @@
+{
+ "cmd": "train",
+ "model": "qwen2.5-vl-7b",
+ "teacher": "results/raw/B_teacher_qwen7b.csv",
+ "train_q": "data/s1_train.jsonl",
+ "config": "configs/default.yaml",
+ "loss": "both",
+ "out_dir": "ckpt/B_qwen7b_both",
+ "r": 16,
+ "alpha": 32,
+ "dropout": 0.05,
+ "lr": 0.0001,
+ "epochs": 1,
+ "group": 8,
+ "margin": 0.1,
+ "rank_weight": 1.0,
+ "seed": 0,
+ "grad_ckpt": false,
+ "max_steps": 0,
+ "device": "cuda",
+ "stats": {
+  "exists": {
+   "mu_t": -0.9940835312499999,
+   "sd_t": 6.571837882902359,
+   "mu_b": -2.7640118312835695,
+   "sd_b": 6.680917334850031
+  },
+  "forall": {
+   "mu_t": -6.7810447375,
+   "sd_t": 4.423097314019001,
+   "mu_b": -0.7562239730358123,
+   "sd_b": 3.1126799017783373
+  }
+ },
+ "lora_regex": ".*language_model\\.layers\\.\\d+\\.(self_attn\\.(q|k|v|o)_proj|mlp\\.(gate|up|down)_proj)"
+}

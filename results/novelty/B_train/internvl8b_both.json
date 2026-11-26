@@ -1,0 +1,36 @@
+{
+ "cmd": "train",
+ "model": "internvl3-8b",
+ "teacher": "results/raw/B_teacher_internvl8b.csv",
+ "train_q": "data/s1_train.jsonl",
+ "config": "configs/default.yaml",
+ "loss": "both",
+ "out_dir": "ckpt/B_internvl8b_both",
+ "r": 16,
+ "alpha": 32,
+ "dropout": 0.05,
+ "lr": 0.0001,
+ "epochs": 1,
+ "group": 8,
+ "margin": 0.1,
+ "rank_weight": 1.0,
+ "seed": 0,
+ "grad_ckpt": false,
+ "max_steps": 0,
+ "device": "cuda",
+ "stats": {
+  "exists": {
+   "mu_t": -0.056103787499999974,
+   "sd_t": 6.939200974704292,
+   "mu_b": -1.5959374475479127,
+   "sd_b": 8.12840374133356
+  },
+  "forall": {
+   "mu_t": -5.22256445625,
+   "sd_t": 4.594418211609475,
+   "mu_b": 0.8250114679336548,
+   "sd_b": 3.3523286341400578
+  }
+ },
+ "lora_regex": ".*language_model\\.layers\\.\\d+\\.(self_attn\\.(q|k|v|o)_proj|mlp\\.(gate|up|down)_proj)"
+}

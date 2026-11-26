@@ -20,7 +20,8 @@
   - 한 optimizer step = 같은 (family, N) 의 문항 G개 (rank 손실용). 문항마다 forward(그래프 유지) 후 한 번에 backward.
   - LoRA: 정규식으로 model.language_model.layers.*.{q,k,v,o}_proj, mlp.{gate,up,down}_proj 만.
     (Qwen2.5-VL 비전 블록도 mlp.gate_proj/up_proj/down_proj 라는 같은 이름을 쓰므로 이름 목록으로 지정하면 안 됨 — 직접 확인)
-  - attention 은 sdpa (eager 금지), gradient checkpointing(use_reentrant=False).
+  - attention 은 sdpa (eager 금지). GPU 단독 사용 + checkpointing 없음이 기본 (--grad_ckpt 로 켬).
+  - 7B 는 G=8 문항 그래프를 동시에 들면 OOM -> rank/both 는 2-pass, mse 는 1-pass (train() 주석).
 """
 from __future__ import annotations
 
@@ -126,7 +127,8 @@ def train(args):
         p.requires_grad_(False)
     pm = add_lora(model, args.r, args.alpha, args.dropout)
     pm.print_trainable_parameters()
-    model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+    if args.grad_ckpt:
+        model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
     model.config.use_cache = False
     W = model.lm_head.weight.detach()
     w_diff = (W[vlm.answer_tokens.yes].float() - W[vlm.answer_tokens.no].float())    # m = w_diff · h (fp32)
@@ -150,7 +152,34 @@ def train(args):
     for ep in range(args.epochs):
         for f, N, ids in make_groups(T, args.group, rng):
             st = stats[f]
-            zs = torch.stack([(student_m(qs[T.qid[i]]) - st["mu_b"]) / st["sd_b"] for i in ids])
+            # 2-pass (메모리 = 문항 1개): ① grad 없이 G 개 z_s -> 손실의 ∂L/∂z_s,
+            # ② 문항마다 다시 forward 해 (z_s_i · g_i) 를 backward. 그래디언트는 한 번에 backward 한 것과 같다
+            # (pass 1 은 eval 모드라 LoRA dropout 마스크만 다르다). 7B 에서 8 문항 그래프를 동시에 들면 OOM.
+            if args.loss == "mse":   # 문항별 독립 -> 1-pass: 문항마다 forward+backward (평균이므로 1/G)
+                opt.zero_grad(set_to_none=True)
+                zl = []
+                for i in ids:
+                    z = (student_m(qs[T.qid[i]]) - st["mu_b"]) / st["sd_b"]
+                    (((z - T.z_t[i]) ** 2) / len(ids)).backward()
+                    zl.append(float(z.detach()))
+                zs0 = torch.tensor(zl)
+                zt = torch.tensor([T.z_t[i] for i in ids], dtype=torch.float32)
+                mse = ((zs0 - zt) ** 2).mean(); rank = torch.tensor(0.0); loss = mse; n_pairs = 0
+                torch.nn.utils.clip_grad_norm_(params, 1.0)
+                opt.step(); sched.step(); step += 1
+                log.write(dict(step=step, epoch=ep, family=f, N=N, loss=float(loss), mse=float(mse), rank=0.0,
+                               n_pairs=0, lr=sched.get_last_lr()[0], sec=round(time.time() - t0, 1)))
+                if args.max_steps and step >= args.max_steps:
+                    break
+                if step % 25 == 0:
+                    print(f"ep {ep} step {step}/{total} mse {float(mse):.4f} {(time.time() - t0) / step:.2f}s/step",
+                          flush=True)
+                continue
+            model.eval()
+            with torch.no_grad():
+                zs0 = torch.stack([(student_m(qs[T.qid[i]]) - st["mu_b"]) / st["sd_b"] for i in ids])
+            model.train()
+            zs = zs0.clone().requires_grad_(True)
             zt = torch.tensor([T.z_t[i] for i in ids], device=zs.device, dtype=torch.float32)
             mse = ((zs - zt) ** 2).mean()
             d_t = zt[:, None] - zt[None, :]
@@ -159,11 +188,14 @@ def train(args):
             rank = (torch.nn.functional.softplus(-(zs[:, None] - zs[None, :]))[mask].mean()
                     if n_pairs else zs.sum() * 0.0)
             loss = {"mse": mse, "rank": rank, "both": mse + args.rank_weight * rank}[args.loss]
+            g = torch.autograd.grad(loss, zs)[0].detach()
             opt.zero_grad(set_to_none=True)
-            loss.backward()
+            for gi, i in zip(g.tolist(), ids):
+                if gi != 0.0:
+                    ((student_m(qs[T.qid[i]]) - st["mu_b"]) / st["sd_b"] * gi).backward()
             torch.nn.utils.clip_grad_norm_(params, 1.0)
             opt.step(); sched.step(); step += 1
-            log.write(dict(step=step, epoch=ep, family=f, N=N, loss=float(loss), mse=float(mse), rank=float(rank),
+            log.write(dict(step=step, epoch=ep, family=f, N=N, loss=float(loss.detach()), mse=float(mse.detach()), rank=float(rank.detach()),
                            n_pairs=n_pairs, lr=sched.get_last_lr()[0], sec=round(time.time() - t0, 1)))
             if args.max_steps and step >= args.max_steps:
                 break
@@ -191,11 +223,12 @@ def main(argv=None):
     t.add_argument("--alpha", type=int, default=32)
     t.add_argument("--dropout", type=float, default=0.05)
     t.add_argument("--lr", type=float, default=1e-4)
-    t.add_argument("--epochs", type=int, default=2)
+    t.add_argument("--epochs", type=int, default=1)
     t.add_argument("--group", type=int, default=8)
     t.add_argument("--margin", type=float, default=0.1)
     t.add_argument("--rank_weight", type=float, default=1.0)
     t.add_argument("--seed", type=int, default=0)
+    t.add_argument("--grad_ckpt", action="store_true", help="gradient checkpointing (GPU 공유 시 메모리 절약)")
     t.add_argument("--max_steps", type=int, default=0, help="디버그용: epoch 마다 이 step 수에서 중단")
     t.add_argument("--device", default="cuda")
     args = ap.parse_args(argv)

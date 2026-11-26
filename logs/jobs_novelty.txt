@@ -1,4 +1,17 @@
+Bt_internvl8b|bash logs/queue_B.sh internvl3-8b internvl8b teacherA teacherB
+B_qwen3b_both|EXCL;bash logs/queue_B.sh qwen2.5-vl-3b qwen3b train_both eval_both
+B_internvl8b_both|EXCL;bash logs/queue_B.sh internvl3-8b internvl8b train_both eval_both
+Bt_qwen3b|bash logs/queue_B.sh qwen2.5-vl-3b qwen3b teacherA teacherB
+F03_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b F03
+C_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b C
+F03_qwen3b|bash logs/queue_novelty.sh qwen2.5-vl-3b qwen3b F03
+C_qwen3vl8b|bash logs/queue_novelty.sh qwen3-vl-8b qwen3vl8b C
+Call_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b Call
 # 이름|명령   (logs/sched_novelty.sh 가 순서대로 실행)
+Bev_qwen7b_both|EPOCH=epoch1 bash logs/queue_B.sh qwen2.5-vl-7b qwen7b eval_both
+B_qwen7b_both|EXCL;bash logs/queue_B.sh qwen2.5-vl-7b qwen7b train_both eval_both
+B_qwen7b_mse|EXCL;bash logs/queue_B.sh qwen2.5-vl-7b qwen7b train_mse eval_mse
+B_qwen7b_rank|EXCL;bash logs/queue_B.sh qwen2.5-vl-7b qwen7b train_rank eval_rank
 A_qwen3vl8b_a|bash logs/verify_A.sh qwen3-vl-8b qwen3vl8b; bash logs/queue_A.sh qwen3-vl-8b qwen3vl8b small neg exno
 A_qwen3vl8b_b|bash logs/queue_A.sh qwen3-vl-8b qwen3vl8b big negbig exnobig
 A_internvl8b_a|WAIT:OpenGVLab/InternVL3-8B-hf;bash logs/verify_A.sh internvl3-8b internvl8b; bash logs/queue_A.sh internvl3-8b internvl8b small neg exno
@@ -10,23 +23,21 @@ m2ex_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b m2ex
 m2ex_qwen3vl8b|bash logs/queue_novelty.sh qwen3-vl-8b qwen3vl8b m2ex
 m2ex_internvl8b|WAIT:OpenGVLab/InternVL3-8B-hf;bash logs/queue_novelty.sh internvl3-8b internvl8b m2ex
 m2ex_llavaov7b|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;bash logs/queue_novelty.sh llava-onevision-7b llavaov7b m2ex
+E2_qwen3b|bash logs/queue_E2.sh qwen2.5-vl-3b qwen3b
+E2_qwen7b|bash logs/queue_E2.sh qwen2.5-vl-7b qwen7b
+E2_qwen3vl8b|bash logs/queue_E2.sh qwen3-vl-8b qwen3vl8b
+E2_internvl8b|bash logs/queue_E2.sh internvl3-8b internvl8b
+# 중단(2026-11-26 KST 01:55, 380/2400 에서): E2_llavaov7b|bash logs/queue_E2.sh llava-onevision-7b llavaov7b
 D_qwen3b|bash logs/queue_novelty.sh qwen2.5-vl-3b qwen3b D
 D_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b D
 D_qwen3vl8b|bash logs/queue_novelty.sh qwen3-vl-8b qwen3vl8b D
-D_internvl8b|WAIT:OpenGVLab/InternVL3-8B-hf;bash logs/queue_novelty.sh internvl3-8b internvl8b D
-D_llavaov7b|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;bash logs/queue_novelty.sh llava-onevision-7b llavaov7b D
-C_qwen3b|bash logs/queue_novelty.sh qwen2.5-vl-3b qwen3b C
-C_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b C
-C_qwen3vl8b|bash logs/queue_novelty.sh qwen3-vl-8b qwen3vl8b C
-C_internvl8b|WAIT:OpenGVLab/InternVL3-8B-hf;bash logs/queue_novelty.sh internvl3-8b internvl8b C
-C_llavaov7b|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;bash logs/queue_novelty.sh llava-onevision-7b llavaov7b C
-F03_qwen3b|bash logs/queue_novelty.sh qwen2.5-vl-3b qwen3b F03
-F03_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b F03
+# 제외(2026-11-27 KST 02:00, 시간 단축): D_internvl8b|WAIT:OpenGVLab/InternVL3-8B-hf;bash logs/queue_novelty.sh internvl3-8b internvl8b D
+# 제외(2026-11-26, 시간 부족): D_llavaov7b|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;bash logs/queue_novelty.sh llava-onevision-7b llavaov7b D
+# 제외(2026-11-27 KST 02:00, 시간 단축): C_qwen3b|bash logs/queue_novelty.sh qwen2.5-vl-3b qwen3b C
+# 제외(2026-11-27 KST 02:00, 시간 단축): C_internvl8b|WAIT:OpenGVLab/InternVL3-8B-hf;bash logs/queue_novelty.sh internvl3-8b internvl8b C
+# 제외(2026-11-26, 시간 부족): C_llavaov7b|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;bash logs/queue_novelty.sh llava-onevision-7b llavaov7b C
 F10_qwen3b|bash logs/queue_novelty.sh qwen2.5-vl-3b qwen3b F10
 F10_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b F10
-F10_qwen3vl8b|bash logs/queue_novelty.sh qwen3-vl-8b qwen3vl8b F10
-F10_internvl8b|WAIT:OpenGVLab/InternVL3-8B-hf;bash logs/queue_novelty.sh internvl3-8b internvl8b F10
-F10_llavaov7b|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;bash logs/queue_novelty.sh llava-onevision-7b llavaov7b F10
-Call_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b Call
-B_internvl8b_both|bash logs/queue_B.sh internvl3-8b internvl8b teacherA teacherB train_both eval_both
-B_qwen3b_both|bash logs/queue_B.sh qwen2.5-vl-3b qwen3b teacherA teacherB train_both eval_both
+# 제외(2026-11-27 KST 02:00, 시간 단축): F10_qwen3vl8b|bash logs/queue_novelty.sh qwen3-vl-8b qwen3vl8b F10
+# 제외(2026-11-27 KST 02:00, 시간 단축): F10_internvl8b|WAIT:OpenGVLab/InternVL3-8B-hf;bash logs/queue_novelty.sh internvl3-8b internvl8b F10
+# 제외(2026-11-26, 시간 부족): F10_llavaov7b|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;bash logs/queue_novelty.sh llava-onevision-7b llavaov7b F10

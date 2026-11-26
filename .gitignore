@@ -28,3 +28,6 @@ logs/*.log
 
 # 실험 B LoRA 체크포인트 (커밋하지 않음)
 ckpt/
+
+# 스케줄러 실행 출력
+logs/run/
