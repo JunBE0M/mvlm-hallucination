@@ -45,7 +45,8 @@ def run_single(args):
         if not todo:
             return
         vlm = load_model(args.model or mc["name"], attn_impl="sdpa", dtype=mc.get("dtype", "bfloat16"),
-                         max_pixels=mc.get("max_pixels"), min_pixels=mc.get("min_pixels"), device=args.device)
+                         max_pixels=mc.get("max_pixels"), min_pixels=mc.get("min_pixels"), device=args.device,
+                         adapter=args.adapter)
         at = vlm.answer_tokens
         t0 = time.time()
         for i, it in enumerate(todo, 1):
@@ -87,6 +88,7 @@ def main(argv=None):
     ap.add_argument("--model", default=None)
     ap.add_argument("--out", required=True)
     ap.add_argument("--device", default="cuda")
+    ap.add_argument("--adapter", default=None, help="peft LoRA 디렉터리 (실험 B student)")
     ap.add_argument("--aggregate", action="store_true")
     ap.add_argument("--shard", default=None, help="i/k: crc32(key) %% k == i 인 항목만 (여러 GPU 분할, 출력 파일은 따로)")
     ap.add_argument("--single", default=None, help="--aggregate 시 단일 이미지 결과 csv")

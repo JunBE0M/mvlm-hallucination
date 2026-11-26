@@ -69,6 +69,7 @@ def common_args(ap: argparse.ArgumentParser):
     ap.add_argument("--flush_every", type=int, default=20)
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--image_labels", action="store_true", help='각 이미지 앞에 "Image i: " 삽입')
+    ap.add_argument("--adapter", default=None, help="peft LoRA 디렉터리 (실험 B student)")
 
 
 def main(argv=None):
@@ -92,7 +93,7 @@ def main(argv=None):
                          dtype=mc.get("dtype", "bfloat16"),
                          max_pixels=args.max_pixels or mc.get("max_pixels"),
                          min_pixels=mc.get("min_pixels"), device=args.device,
-                         image_labels=args.image_labels)
+                         image_labels=args.image_labels, adapter=args.adapter)
         t0, n_err = time.time(), 0
         for i, q in enumerate(todo, 1):
             try:

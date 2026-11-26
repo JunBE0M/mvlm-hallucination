@@ -43,6 +43,7 @@ def main(argv=None):
     ap.add_argument("--qtypes", nargs="*", default=None)
     ap.add_argument("--mode", default="post", choices=["post", "strict"])
     ap.add_argument("--device", default="cuda")
+    ap.add_argument("--adapter", default=None, help="peft LoRA 디렉터리 (실험 B student)")
     args = ap.parse_args(argv)
 
     cfg = load_config(args.config)
@@ -54,7 +55,8 @@ def main(argv=None):
         if not todo:
             return
         vlm = load_model(args.model or mc["name"], attn_impl="eager", dtype=mc.get("dtype", "bfloat16"),
-                         max_pixels=mc.get("max_pixels"), min_pixels=mc.get("min_pixels"), device=args.device)
+                         max_pixels=mc.get("max_pixels"), min_pixels=mc.get("min_pixels"), device=args.device,
+                         adapter=args.adapter)
         at = vlm.answer_tokens
         layers = layer_set("all", vlm.num_layers)
         t0, n_err = time.time(), 0

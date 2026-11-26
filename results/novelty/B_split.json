@@ -1,0 +1,27 @@
+{
+ "train": [
+  "bus",
+  "car",
+  "dog",
+  "giraffe",
+  "person",
+  "pizza",
+  "teddy bear",
+  "train",
+  "tv",
+  "zebra"
+ ],
+ "heldout": [
+  "airplane",
+  "boat",
+  "cat",
+  "elephant",
+  "horse",
+  "laptop",
+  "motorcycle",
+  "refrigerator",
+  "toilet",
+  "umbrella"
+ ],
+ "rule": "sorted(random.Random(0).sample(CLASSES, 10))"
+}

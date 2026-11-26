@@ -15,7 +15,11 @@
         q_last = query[:, :, -1], K = repeat_kv(key) 로 softmax(q_last·Kᵀ·scaling + mask[-1]) 를 fp32 로 직접 계산,
         곧바로 구간(one-hot [S, L])에 곱해 [H, S] 로 축약해 CPU 로 옮긴다.
     → output_attentions=True 처럼 [H, L, L] 를 모든 층에 대해 쌓지 않는다 (층당 저장량 H×S).
-  - --verify: eager 가 함께 반환하는 attn_weights 의 마지막 행과 직접 계산한 행의 최대 절대오차를 기록.
+  - --verify (기본 --verify_base sdpa, 2026-11-26 추가): 직접 계산한 p 로 p·V(fp32)를 만들어 sdpa 가 실제로 낸
+    마지막 행 출력과의 상대오차를 기록 -> p 가 실제 모델 경로(sdpa)의 가중치인지 확인.
+    --verify_base eager: eager attn_weights 마지막 행과의 절대오차 (eager 는 QKᵀ 를 bf16 으로 계산해 긴 입력에서 크게 어긋남:
+    7B N=16 에서 0.75).
+  - 언어모델 attention 판별은 vlm.is_text_attention (models.text_attention_modules: 모델별 클래스를 직접 확인).
 """
 from __future__ import annotations
 
@@ -108,6 +112,7 @@ class LastRowAttentionProbe:
         out = self._base_fn(module)(module, query, key, value, attention_mask,
                                     scaling=scaling, dropout=dropout, **kwargs)
         if self._onehot is not None and self.vlm.is_text_attention(module):
+            import torch
             if query.shape[0] != 1:
                 raise ValueError("attn probe supports batch size 1 only")
             p = last_row_attention(query, key, attention_mask, scaling)[0]        # [H, L]
@@ -115,7 +120,15 @@ class LastRowAttentionProbe:
                 raise ValueError(f"key length {p.shape[-1]} != segment length {self._onehot.shape[1]}"
                                  " (KV cache in use?)")
             self._store[module.layer_idx] = (p @ self._onehot.T).cpu().numpy()   # [H, S]
-            if self.verify:
+            if self.verify and self.base == "sdpa":
+                # p 가 sdpa 가 실제로 쓴 가중치인지: p·V (fp32) 와 sdpa 출력 마지막 행 비교 (상대오차)
+                o = out[0] if isinstance(out, tuple) else out                       # [B, L, H, d]
+                v = repeat_kv(value, query.shape[1] // value.shape[1]).float()[0]  # [H, L, d]
+                o_probe = torch.einsum("hl,hld->hd", p, v)
+                o_sdpa = o[0, -1].float()                                           # [H, d]
+                d = ((o_probe - o_sdpa).abs().max() / o_sdpa.abs().max().clamp_min(1e-6)).item()
+                self.max_abs_diff = max(self.max_abs_diff, d)
+            elif self.verify:
                 w = out[1] if isinstance(out, tuple) and len(out) > 1 else None
                 if w is None:
                     raise RuntimeError("--verify needs the eager implementation (attn_weights returned)")
@@ -152,7 +165,10 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     common_args(ap)
     ap.add_argument("--npz_dir", default=None, help="기본: <out 경로 stem>_npz/")
-    ap.add_argument("--verify", action="store_true", help="eager attn_weights 마지막 행과 대조")
+    ap.add_argument("--verify", action="store_true", help="검증 (--verify_base 참고)")
+    ap.add_argument("--verify_base", default="sdpa", choices=["sdpa", "eager"],
+                    help="sdpa: p·V 를 sdpa 출력 마지막 행과 대조(상대오차, 실제 모델 경로). "
+                         "eager: eager attn_weights 마지막 행과 대조(절대오차; bf16 QKᵀ 라 긴 입력에서 부정확)")
     args = ap.parse_args(argv)
 
     from .io_utils import ResumableCsvWriter, atomic_save_npz
@@ -176,7 +192,7 @@ def main(argv=None):
                          image_labels=args.image_labels)
         t0, n_err = time.time(), 0
         with LastRowAttentionProbe(vlm, impl="eager", verify=args.verify,
-                                   base="eager" if args.verify else "sdpa") as probe:
+                                   base=args.verify_base if args.verify else "sdpa") as probe:
             for i, q in enumerate(todo, 1):
                 try:
                     images = load_images(q["image_paths"], cfg["coco"]["root"])
@@ -192,7 +208,9 @@ def main(argv=None):
                     row["npz"] = str(npz_path)
                     row["verify_max_abs_diff"] = probe.max_abs_diff if args.verify else None
                     if args.verify:
-                        print(f"[verify] {q['qid']}: max|eager_last_row - probe| = {probe.max_abs_diff:.2e}")
+                        what = ("max|p·V - sdpa_out| / max|sdpa_out|" if probe.base == "sdpa"
+                                else "max|eager_last_row - probe|")
+                        print(f"[verify] {q['qid']}: {what} = {probe.max_abs_diff:.2e}  (m={row['m']:.3f})")
                     w.write(row)
                 except Exception:
                     n_err += 1

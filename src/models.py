@@ -18,6 +18,7 @@
 """
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 
 from .segments import Segments, split_segments
@@ -316,7 +317,9 @@ class _TodoVLM(BaseVLM):
 _FAMILY = {"qwen2_5_vl": QwenVL25, "qwen3_vl": GenericVLM, "internvl3": GenericVLM, "llava_onevision": GenericVLM}
 
 
-def load_model(name: str, attn_impl: str = "sdpa", **kwargs) -> BaseVLM:
+def load_model(name: str, attn_impl: str = "sdpa", adapter: str | None = None, **kwargs) -> BaseVLM:
+    """adapter: peft LoRA 디렉터리 (실험 B student). merge 하지 않는다 (bf16 가중치에 더하면 작은 ΔW 가 반올림으로 사라짐).
+    LoRA 는 q_proj 등 Linear 만 감싸므로 self_attn 모듈(=is_text_attention 판별 대상)은 그대로다."""
     if name not in MODEL_REGISTRY:
         raise KeyError(f"unknown model {name}; choose from {sorted(MODEL_REGISTRY)}")
     spec = MODEL_REGISTRY[name]
@@ -324,8 +327,17 @@ def load_model(name: str, attn_impl: str = "sdpa", **kwargs) -> BaseVLM:
     if cls is _TodoVLM:
         return cls(name)
     if cls is GenericVLM:
-        return cls(name, spec.hf_id, spec.family, attn_impl=attn_impl, **kwargs)
-    return cls(name, spec.hf_id, attn_impl=attn_impl, **kwargs)
+        vlm = cls(name, spec.hf_id, spec.family, attn_impl=attn_impl, **kwargs)
+    else:
+        vlm = cls(name, spec.hf_id, attn_impl=attn_impl, **kwargs)
+    if adapter:
+        from peft import PeftModel
+        vlm.peft = PeftModel.from_pretrained(vlm.model, adapter).eval()   # LoRA 는 vlm.model 에 in-place 로 주입됨
+        n_lora = sum(1 for n, _ in vlm.model.named_modules() if n.endswith("lora_A"))
+        vlm._lm_head_fp32 = None
+        vlm.name = f"{name}+{os.path.basename(os.path.normpath(adapter))}"
+        print(f"[{name}] adapter {adapter}: {n_lora} LoRA modules")
+    return vlm
 
 
 def load_images(paths, root):

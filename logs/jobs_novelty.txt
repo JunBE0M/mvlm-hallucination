@@ -1,0 +1,30 @@
+# 이름|명령   (logs/sched_novelty.sh 가 순서대로 실행)
+A_qwen3vl8b_a|bash logs/verify_A.sh qwen3-vl-8b qwen3vl8b; bash logs/queue_A.sh qwen3-vl-8b qwen3vl8b small neg exno
+A_qwen3vl8b_b|bash logs/queue_A.sh qwen3-vl-8b qwen3vl8b big negbig exnobig
+A_internvl8b_a|WAIT:OpenGVLab/InternVL3-8B-hf;bash logs/verify_A.sh internvl3-8b internvl8b; bash logs/queue_A.sh internvl3-8b internvl8b small neg exno
+A_internvl8b_b|WAIT:OpenGVLab/InternVL3-8B-hf;bash logs/queue_A.sh internvl3-8b internvl8b big negbig exnobig
+A_llavaov7b_a|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;bash logs/verify_A.sh llava-onevision-7b llavaov7b; bash logs/queue_A.sh llava-onevision-7b llavaov7b small neg exno
+A_llavaov7b_b|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;bash logs/queue_A.sh llava-onevision-7b llavaov7b big negbig exnobig
+m2ex_qwen3b|bash logs/queue_novelty.sh qwen2.5-vl-3b qwen3b m2ex
+m2ex_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b m2ex
+m2ex_qwen3vl8b|bash logs/queue_novelty.sh qwen3-vl-8b qwen3vl8b m2ex
+m2ex_internvl8b|WAIT:OpenGVLab/InternVL3-8B-hf;bash logs/queue_novelty.sh internvl3-8b internvl8b m2ex
+m2ex_llavaov7b|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;bash logs/queue_novelty.sh llava-onevision-7b llavaov7b m2ex
+D_qwen3b|bash logs/queue_novelty.sh qwen2.5-vl-3b qwen3b D
+D_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b D
+D_qwen3vl8b|bash logs/queue_novelty.sh qwen3-vl-8b qwen3vl8b D
+D_internvl8b|WAIT:OpenGVLab/InternVL3-8B-hf;bash logs/queue_novelty.sh internvl3-8b internvl8b D
+D_llavaov7b|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;bash logs/queue_novelty.sh llava-onevision-7b llavaov7b D
+C_qwen3b|bash logs/queue_novelty.sh qwen2.5-vl-3b qwen3b C
+C_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b C
+C_qwen3vl8b|bash logs/queue_novelty.sh qwen3-vl-8b qwen3vl8b C
+C_internvl8b|WAIT:OpenGVLab/InternVL3-8B-hf;bash logs/queue_novelty.sh internvl3-8b internvl8b C
+C_llavaov7b|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;bash logs/queue_novelty.sh llava-onevision-7b llavaov7b C
+F03_qwen3b|bash logs/queue_novelty.sh qwen2.5-vl-3b qwen3b F03
+F03_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b F03
+F10_qwen3b|bash logs/queue_novelty.sh qwen2.5-vl-3b qwen3b F10
+F10_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b F10
+F10_qwen3vl8b|bash logs/queue_novelty.sh qwen3-vl-8b qwen3vl8b F10
+F10_internvl8b|WAIT:OpenGVLab/InternVL3-8B-hf;bash logs/queue_novelty.sh internvl3-8b internvl8b F10
+F10_llavaov7b|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;bash logs/queue_novelty.sh llava-onevision-7b llavaov7b F10
+Call_qwen7b|bash logs/queue_novelty.sh qwen2.5-vl-7b qwen7b Call
