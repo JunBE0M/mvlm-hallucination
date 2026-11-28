@@ -1,6 +1,8 @@
 # datasets / caches
 val2017/
+train2017/
 annotations/
+bench/
 *.zip
 hf_cache/
 .venv/
