@@ -6,8 +6,10 @@
 #   EXCL;          GPU 단독 실행 (실험 B 학습: checkpointing 없이 7B 1문항 활성화 ~25GB). 대기 중인 첫 작업이 EXCL 이면
 #                  실행 중 작업이 가장 적은 GPU 를 예약해 새 작업을 넣지 않고, 비면 띄운다.
 # 실행 기록: logs/jobs_launched.txt. (2026-11-26 13:10 EXCL 지원 추가 후 재시작)
+# 작업 파일과 실행 기록 파일은 환경변수로 바꿀 수 있다 (2026-11-28, coco2017_custom 바닐라: logs/jobs_coco_e1.txt)
+#   JOBS=logs/jobs_coco_e1.txt LAUNCHED=logs/run/jobs_coco_e1_launched.txt nohup bash logs/sched_novelty.sh > logs/run/sched_coco_e1.log 2>&1 &
 cd /workspace/mvlm-hallucination
-J=logs/jobs_novelty.txt; L=logs/jobs_launched.txt; touch $J $L; mkdir -p logs/run
+J=${JOBS:-logs/jobs_novelty.txt}; L=${LAUNCHED:-logs/jobs_launched.txt}; mkdir -p logs/run; touch $J $L
 ready(){ HF_HOME=/workspace/.hf_home /venv/main/bin/python -c "from huggingface_hub import snapshot_download as s; s('$1', local_files_only=True)" >/dev/null 2>&1; }
 count(){  # GPU $1 에서 돌고 있는 우리 작업 수 (CUDA_VISIBLE_DEVICES=$1 인 queue_*.sh / verify_A.sh). EXCL 작업은 2 로 센다
   local n=0 p
