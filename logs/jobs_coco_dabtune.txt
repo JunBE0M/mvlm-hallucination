@@ -1,0 +1,22 @@
+# coco2017_custom DAB α 선택 작업 목록 (docs/split_coco.md). 이름|명령. 작업 하나 = (모델, 데이터 seed) 의 val 에서
+# α ∈ {0.1, 0.25, 0.5, 0.75, 1.0} 5회 실행 (queue_gen.sh 의 coco_dabtune, base_ratio 0.2).
+# 실행 전에 DAB 정상 동작 확인(α=0 이면 바닐라와 같은 m, --verify 로 이미지 몫 편차가 (1−α)배)을 먼저 한다.
+# 실행 (서버, 레포 루트. 바닐라 스케줄러가 작업을 다 띄운 뒤 그 스케줄러를 끄고 시작):
+#   JOBS=logs/jobs_coco_dabtune.txt LAUNCHED=logs/run/jobs_coco_dabtune_launched.txt nohup bash logs/sched_novelty.sh > logs/run/sched_coco_dabtune.log 2>&1 &
+# 결과: results/coco2017_custom/raw/coco2017_s{seed}_dab_a{α}_val_{tag}.csv
+# 다음: python -m src.dab_eval --splits val 로 seed 별 α 를 고르고 docs/ 에 동결 → test 는 coco_dab (SPLITS=test ALPHAS="0.5 <고른 값>")
+dabtune_llavaov7b_s1|DSEEDS=1 bash logs/queue_gen.sh llava-onevision-7b llavaov7b coco_dabtune
+dabtune_llavaov7b_s2|DSEEDS=2 bash logs/queue_gen.sh llava-onevision-7b llavaov7b coco_dabtune
+dabtune_llavaov7b_s3|DSEEDS=3 bash logs/queue_gen.sh llava-onevision-7b llavaov7b coco_dabtune
+dabtune_qwen7b_s1|DSEEDS=1 bash logs/queue_gen.sh qwen2.5-vl-7b qwen7b coco_dabtune
+dabtune_qwen7b_s2|DSEEDS=2 bash logs/queue_gen.sh qwen2.5-vl-7b qwen7b coco_dabtune
+dabtune_qwen7b_s3|DSEEDS=3 bash logs/queue_gen.sh qwen2.5-vl-7b qwen7b coco_dabtune
+dabtune_qwen3b_s1|DSEEDS=1 bash logs/queue_gen.sh qwen2.5-vl-3b qwen3b coco_dabtune
+dabtune_qwen3b_s2|DSEEDS=2 bash logs/queue_gen.sh qwen2.5-vl-3b qwen3b coco_dabtune
+dabtune_qwen3b_s3|DSEEDS=3 bash logs/queue_gen.sh qwen2.5-vl-3b qwen3b coco_dabtune
+dabtune_qwen3vl8b_s1|DSEEDS=1 bash logs/queue_gen.sh qwen3-vl-8b qwen3vl8b coco_dabtune
+dabtune_qwen3vl8b_s2|DSEEDS=2 bash logs/queue_gen.sh qwen3-vl-8b qwen3vl8b coco_dabtune
+dabtune_qwen3vl8b_s3|DSEEDS=3 bash logs/queue_gen.sh qwen3-vl-8b qwen3vl8b coco_dabtune
+dabtune_internvl8b_s1|DSEEDS=1 bash logs/queue_gen.sh internvl3-8b internvl8b coco_dabtune
+dabtune_internvl8b_s2|DSEEDS=2 bash logs/queue_gen.sh internvl3-8b internvl8b coco_dabtune
+dabtune_internvl8b_s3|DSEEDS=3 bash logs/queue_gen.sh internvl3-8b internvl8b coco_dabtune
