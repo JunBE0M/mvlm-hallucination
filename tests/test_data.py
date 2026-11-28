@@ -133,6 +133,36 @@ def test_fixed_position(fake_ann, cfg):
             assert r["present_positions"] == [r["N"] - 1]
 
 
+def test_uniform_drops_late_positions_when_fewer_items_than_N():
+    """기존 uniform 동작(재현용으로 유지): 문항 수 < N 이면 뒤쪽 자리가 빠진다."""
+    pos = D.odd_positions(5, 8, "uniform", random.Random(0))
+    assert sorted(pos) == [0, 1, 2, 3, 4]
+
+
+def test_random_positions_cover_all_and_are_deterministic():
+    a = D.odd_positions(4000, 8, "random", random.Random("s"))
+    b = D.odd_positions(4000, 8, "random", random.Random("s"))
+    assert a == b                                              # 같은 seed -> 같은 자리
+    c = Counter(a)
+    assert set(c) == set(range(8))
+    assert all(400 <= v <= 600 for v in c.values())            # 기대 500, 4σ 안팎
+    small = D.odd_positions(5, 8, "random", random.Random(1))
+    assert all(0 <= p < 8 for p in small)
+
+
+def test_random_mode_in_generate_questions(fake_ann, cfg):
+    idx = D.load_coco_index(fake_ann[0])
+    c = copy.deepcopy(cfg)
+    c["data"]["odd_position"] = "random"
+    recs = D.generate_questions(idx, c)
+    for r in recs:                                              # 한 장만 다른 사진은 여전히 정확히 1장
+        if r["qtype"] == "forall_no":
+            assert len(r["absent_positions"]) == 1 and 0 <= r["absent_positions"][0] < r["N"]
+        if r["qtype"] == "exists_yes":
+            assert len(r["present_positions"]) == 1 and 0 <= r["present_positions"][0] < r["N"]
+    assert recs == D.generate_questions(idx, c)                 # 재현성
+
+
 def test_area_filter(fake_ann, cfg):
     idx = D.load_coco_index(fake_ann[0])
     c = copy.deepcopy(cfg)

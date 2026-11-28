@@ -75,7 +75,15 @@ def parse_position_mode(mode: str) -> int | None:
 
 
 def odd_positions(n_items: int, N: int, mode: str, rng: random.Random) -> list[int]:
-    """n_items개 문항에 쓸 '홀로 다른 이미지' 위치 목록."""
+    """n_items개 문항에 쓸 '홀로 다른 이미지' 위치 목록.
+    uniform : 0..N-1 을 차례로 n_items 개 채운 뒤 섞는다. n_items 가 N 의 배수일 때만 정확히 균등하고,
+              배수가 아니면 앞쪽 위치가 더 많으며, n_items < N 이면 뒤쪽 위치가 아예 빠진다
+              (예: n_items=5, N=8 -> 0..4 만). 칸마다 같은 패턴이라 클래스를 합쳐도 치우침이 남는다.
+              기존 진단 세트(configs/*.yaml) 재현을 위해 동작은 그대로 둔다.
+    random  : 문항마다 0..N-1 에서 같은 확률로 독립 추출 (COCO 2017 분할 src/splits.py 에서 사용).
+    fixed:k : 항상 k (k<0 이면 뒤에서부터)."""
+    if mode == "random":
+        return [rng.randrange(N) for _ in range(n_items)]
     fixed = parse_position_mode(mode)
     if fixed is None:
         pos = [i % N for i in range(n_items)]   # 셀 안에서 정확히 균등
@@ -170,7 +178,7 @@ def main(argv=None):
     ap.add_argument("--out", default="data/questions.jsonl")
     ap.add_argument("--ann", default=None, help="annotation json 경로 override")
     ap.add_argument("--area_range", type=float, nargs=2, default=None, metavar=("LO", "HI"))
-    ap.add_argument("--odd_position", default=None, help="uniform | fixed:k")
+    ap.add_argument("--odd_position", default=None, help="uniform | random | fixed:k")
     ap.add_argument("--seed", type=int, default=None)
     args = ap.parse_args(argv)
 
