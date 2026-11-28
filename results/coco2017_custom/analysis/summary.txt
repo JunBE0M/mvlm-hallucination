@@ -1,0 +1,1 @@
+test 결과 없음 (seed 마다 val 로 설정을 동결한 뒤 test 를 돌린다)
