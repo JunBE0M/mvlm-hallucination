@@ -1,0 +1,22 @@
+# coco2017_custom 바닐라 작업 목록 (docs/coco2017_vanilla.md). 이름|명령. 작업 하나 = (모델, 데이터 seed) 의 val + test.
+# 실행 (서버, 레포 루트):
+#   JOBS=logs/jobs_coco_e1.txt LAUNCHED=logs/run/jobs_coco_e1_launched.txt nohup bash logs/sched_novelty.sh > logs/run/sched_coco_e1.log 2>&1 &
+# 스케줄러는 GPU 마다 동시에 최대 2개, 여유 메모리 22GB 이상일 때 다음 작업을 띄운다 (48GB 카드 -> GPU 당 2개).
+# WAIT:<hf_id>; 는 그 모델 다운로드가 끝날 때까지 미룬다 (다운로드와 실행을 겹쳐서 진행 가능).
+# 순서: 느린 모델부터 (사진당 토큰 수 LLaVA-OV 730 > InternVL3 256 > Qwen 계열) 넣어서 마지막에 GPU 가 노는 시간을 줄임.
+# 결과: results/coco2017_custom/raw/coco2017_s{seed}_e1_{val,test}_{tag}.csv, 시간·VRAM: results/coco2017_custom/compute/runs.csv
+e1_llavaov7b_s1|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;DSEEDS=1 bash logs/queue_gen.sh llava-onevision-7b llavaov7b coco_e1
+e1_llavaov7b_s2|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;DSEEDS=2 bash logs/queue_gen.sh llava-onevision-7b llavaov7b coco_e1
+e1_llavaov7b_s3|WAIT:llava-hf/llava-onevision-qwen2-7b-ov-hf;DSEEDS=3 bash logs/queue_gen.sh llava-onevision-7b llavaov7b coco_e1
+e1_internvl8b_s1|WAIT:OpenGVLab/InternVL3-8B-hf;DSEEDS=1 bash logs/queue_gen.sh internvl3-8b internvl8b coco_e1
+e1_internvl8b_s2|WAIT:OpenGVLab/InternVL3-8B-hf;DSEEDS=2 bash logs/queue_gen.sh internvl3-8b internvl8b coco_e1
+e1_internvl8b_s3|WAIT:OpenGVLab/InternVL3-8B-hf;DSEEDS=3 bash logs/queue_gen.sh internvl3-8b internvl8b coco_e1
+e1_qwen3vl8b_s1|WAIT:Qwen/Qwen3-VL-8B-Instruct;DSEEDS=1 bash logs/queue_gen.sh qwen3-vl-8b qwen3vl8b coco_e1
+e1_qwen3vl8b_s2|WAIT:Qwen/Qwen3-VL-8B-Instruct;DSEEDS=2 bash logs/queue_gen.sh qwen3-vl-8b qwen3vl8b coco_e1
+e1_qwen3vl8b_s3|WAIT:Qwen/Qwen3-VL-8B-Instruct;DSEEDS=3 bash logs/queue_gen.sh qwen3-vl-8b qwen3vl8b coco_e1
+e1_qwen7b_s1|WAIT:Qwen/Qwen2.5-VL-7B-Instruct;DSEEDS=1 bash logs/queue_gen.sh qwen2.5-vl-7b qwen7b coco_e1
+e1_qwen7b_s2|WAIT:Qwen/Qwen2.5-VL-7B-Instruct;DSEEDS=2 bash logs/queue_gen.sh qwen2.5-vl-7b qwen7b coco_e1
+e1_qwen7b_s3|WAIT:Qwen/Qwen2.5-VL-7B-Instruct;DSEEDS=3 bash logs/queue_gen.sh qwen2.5-vl-7b qwen7b coco_e1
+e1_qwen3b_s1|WAIT:Qwen/Qwen2.5-VL-3B-Instruct;DSEEDS=1 bash logs/queue_gen.sh qwen2.5-vl-3b qwen3b coco_e1
+e1_qwen3b_s2|WAIT:Qwen/Qwen2.5-VL-3B-Instruct;DSEEDS=2 bash logs/queue_gen.sh qwen2.5-vl-3b qwen3b coco_e1
+e1_qwen3b_s3|WAIT:Qwen/Qwen2.5-VL-3B-Instruct;DSEEDS=3 bash logs/queue_gen.sh qwen2.5-vl-3b qwen3b coco_e1
