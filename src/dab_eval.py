@@ -2,14 +2,14 @@
 
     python -m src.dab_eval [--tags qwen3b qwen7b ...] [--seeds 1 2 3] [--splits val test]
 
-입력 (results/raw, 없는 파일은 건너뜀. 문항 목록은 data/splits/coco2017_seed{S}/{split}.jsonl 기준):
+입력 (results/coco2017_custom/raw, 없는 파일은 건너뜀. 문항 목록은 data/splits/coco2017_seed{S}/{split}.jsonl 기준):
     coco2017_s{S}_e1_{split}_{tag}.csv                base     (src.run_eval)
     coco2017_s{S}_dab_a{α}_{split}_{tag}.csv          DAB(α)   (src.dab), α 마다 한 파일
     coco2017_s{S}_m2_post_{split}_{tag}.csv           M2       (src.isolated, ∀ min / ∃ max)
     coco2017_s{S}_m1_agg_{split}_{tag}.csv            M1       (src.per_image --aggregate, ∀ min / ∃ max)
     coco2017_s{S}_m1_single_{split}_{tag}.csv         (β 계산용 이미지별 증거)
     coco2017_s{S}_B_e1_{split}_{tag}_{loss}.csv       B[loss]  (src.run_eval --adapter, 학습 seed = S)
-출력 (--out_dir, 기본 results/coco2017):
+출력 (--out_dir, 기본 results/coco2017_custom/analysis):
     auc.csv        tag × seed × split × method × family(forall/exists) × N(개별 + 전체) : AUC + 95% CI
     diff.csv       같은 셀에서 method − base, method − M2 : AUC 차이 + 짝지은 bootstrap 95% CI + p
     dab_alpha.csv  seed 별 val 에서 α 별 AUC (α 선택용. 그 seed 의 val 로 고르고 docs/ 에 동결한 뒤 그 seed 의 test 를 1회)
@@ -31,7 +31,7 @@ from scipy.stats import rankdata, spearmanr
 from .agg_analysis import fit_beta
 from .data import read_jsonl
 
-RAW = "results/raw"
+RAW = "results/coco2017_custom/raw"
 QROOT = "data/splits"
 TAGS = ["qwen3b", "qwen7b", "qwen3vl8b", "internvl8b", "llavaov7b"]
 SEEDS = [1, 2, 3]
@@ -261,7 +261,7 @@ def main(argv=None):
     ap.add_argument("--splits", nargs="+", default=SPLITS)
     ap.add_argument("--raw", default=RAW)
     ap.add_argument("--qroot", default=QROOT)
-    ap.add_argument("--out_dir", default="results/coco2017")
+    ap.add_argument("--out_dir", default="results/coco2017_custom/analysis")
     ap.add_argument("--nb", type=int, default=1000)
     ap.add_argument("--no_beta", action="store_true")
     args = ap.parse_args(argv)
