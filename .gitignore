@@ -31,3 +31,6 @@ ckpt/
 
 # 스케줄러 실행 출력
 logs/run/
+
+#플랜.md
+docs/
