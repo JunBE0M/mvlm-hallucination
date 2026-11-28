@@ -15,7 +15,9 @@ data:
   n_exists_yes: 10
   n_exists_no: 10
   # 홀로 다른 이미지(forall_no의 absent / exists_yes의 present) 위치:
-  #   "uniform"  : 0..N-1 에 균등 배분(셀 안에서 정확히 균등하게 돌리고 섞음)
+  #   "uniform"  : 0..N-1 을 차례로 채운 뒤 섞음. 칸당 문항 수가 N 의 배수일 때만 정확히 균등
+  #                (아니면 앞쪽 위치가 많고, 문항 수 < N 이면 뒤쪽 위치가 빠짐)
+  #   "random"   : 문항마다 0..N-1 에서 같은 확률로 무작위 (src/splits.py 의 COCO 2017 분할에서 사용)
   #   "fixed:k"  : 항상 k번째 (k<0 이면 뒤에서부터, 예: fixed:-1 = 마지막)
   odd_position: uniform
   # present 이미지의 최대 bbox 면적 비율 필터 [lo, hi] (null이면 필터 없음)

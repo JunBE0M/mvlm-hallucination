@@ -143,6 +143,45 @@ def test_check_flags_mihbench_image_in_test(coco_dir, tmp_path):
     assert any("MIHBench image in question" in e for e in errs)
 
 
+def test_random_positions_used_and_recorded(built):
+    ms, _ = built
+    for seed in SEEDS:
+        m = ms[seed]
+        assert m["odd_position"] == "random"
+        for split, sp in specs(seed).items():
+            counts = m["splits"][split]["odd_position_counts"]
+            assert set(counts) == {"forall_no", "exists_yes"}
+            for qtype in counts:
+                assert set(counts[qtype]) == {str(N) for N in sp["Ns"]}
+                for n, c in counts[qtype].items():
+                    assert len(c) == int(n) and sum(c) == len(CLASSES) * sp["n_per_type"]
+    assert S.make_cfg(CLASSES, TEMPLATES, [2], 1, 0, "val2017")["data"]["odd_position"] == "random"
+
+
+def test_missing_positions_rule():
+    counts = {"forall_no": {"8": [13, 12, 12, 13, 12, 13, 25, 0]},    # 기대 12.5 >= 5 인데 마지막 자리 비어 있음
+              "exists_yes": {"4": [2, 2, 2, 0]}}                    # 기대 1.5 < 5 -> 검사 안 함
+    assert S.missing_positions(counts) == [("forall_no", 8, [7])]
+    assert S.missing_positions({"forall_no": {"8": [20, 20, 20, 20, 20, 0, 0, 0]}}) == [("forall_no", 8, [5, 6, 7])]
+
+
+def test_check_flags_missing_positions(coco_dir, tmp_path):
+    """예전 uniform 방식처럼 뒤쪽 자리가 비어 있는 split 은 check 에서 실패해야 한다."""
+    big = {"test": dict(source="val2017", pool=None, Ns=[8], n_per_type=20, role="x")}
+    S.build(seeds=[1], ann_dir=coco_dir, out_root=tmp_path, mih_dir=coco_dir / "mih" / "Questions",
+            classes=CLASSES, templates=TEMPLATES, specs=lambda s: big, pools=POOLS, unseen={"n": 2, "seed": "u"})
+    mpath = tmp_path / "coco2017_seed1" / "manifest.json"
+    assert S.check(mpath) == []                                 # 무작위: 60문항 / 8자리, 빈 자리 없음
+    f = tmp_path / "coco2017_seed1" / "test.jsonl"
+    recs = read_jsonl(f)
+    for q in recs:                                              # 객체 없는 사진을 앞 5자리로만 몰기
+        if q["qtype"] == "forall_no" and q["absent_positions"][0] >= 5:
+            q["absent_positions"] = [q["absent_positions"][0] % 5]
+    f.write_text("\n".join(json.dumps(q) for q in recs) + "\n")
+    errs = S.check(mpath)
+    assert any("odd image never at positions [5, 6, 7]" in e for e in errs)
+
+
 def test_build_is_deterministic(coco_dir, tmp_path):
     a = do_build(coco_dir, tmp_path / "a", seeds=[1])
     b = do_build(coco_dir, tmp_path / "b", seeds=[1])

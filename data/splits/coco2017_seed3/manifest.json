@@ -3,7 +3,7 @@
  "seed": 3,
  "doc": "docs/split_coco.md",
  "created_by": "python -m src.splits build",
- "git_head": "aa19d9ede11c2034ad87e9a61c52f95176b96542",
+ "git_head": "a5d665aa45509ce6572de5438fa19ffe835ef2c0",
  "classes": [
   "cat",
   "dog",
@@ -30,7 +30,8 @@
   "forall": "Is there a {obj} in all {N} images? Please answer with Yes or No.",
   "exists": "Is there a {obj} in any of the {N} images? Please answer with Yes or No."
  },
- "generator": "src/data.py generate_questions (minimal pairs, uniform odd position, per-(seed, class, N) RNG)",
+ "generator": "src/data.py generate_questions (minimal pairs, per-(seed, class, N) RNG)",
+ "odd_position": "random",
  "source": "COCO 2017 (train/val splits from train2017, test splits from val2017)",
  "coco2014": "not used as an image source. COCO 2017 re-splits the 2014 images with the same image ids; 2014 file names appear only in the MIHBench exclusion below (converted to ids)",
  "annotations": {
@@ -12997,9 +12998,71 @@
    "question_seed": "coco2017-s3-train",
    "file": "data/splits/coco2017_seed3/train.jsonl",
    "n_questions": 3200,
-   "n_unique_images": 6175,
+   "n_unique_images": 6180,
    "regenerated_cells": [],
-   "sha256": "fd20866e316d969b45e41b3ebfc07f51dfd115c0cc6a703521dcfe6832c155d6"
+   "odd_position_counts": {
+    "forall_no": {
+     "2": [
+      107,
+      93
+     ],
+     "4": [
+      52,
+      50,
+      56,
+      42
+     ],
+     "6": [
+      34,
+      27,
+      33,
+      40,
+      32,
+      34
+     ],
+     "8": [
+      19,
+      31,
+      27,
+      20,
+      35,
+      20,
+      23,
+      25
+     ]
+    },
+    "exists_yes": {
+     "2": [
+      100,
+      100
+     ],
+     "4": [
+      52,
+      51,
+      56,
+      41
+     ],
+     "6": [
+      21,
+      40,
+      40,
+      27,
+      37,
+      35
+     ],
+     "8": [
+      27,
+      22,
+      20,
+      22,
+      35,
+      27,
+      26,
+      21
+     ]
+    }
+   },
+   "sha256": "d00e4250a349e012aa2f8e1d21f9385264f7256a80e5f9ad342460142d1a7f2a"
   },
   "val": {
    "source": "train2017",
@@ -13015,9 +13078,71 @@
    "question_seed": "coco2017-s3-val",
    "file": "data/splits/coco2017_seed3/val.jsonl",
    "n_questions": 1600,
-   "n_unique_images": 2590,
+   "n_unique_images": 2605,
    "regenerated_cells": [],
-   "sha256": "df151a08e845fe59669f55bc78231effa7cd3f428dfbb3e5d9f9734ee7d9b5ad"
+   "odd_position_counts": {
+    "forall_no": {
+     "2": [
+      54,
+      46
+     ],
+     "4": [
+      19,
+      24,
+      29,
+      28
+     ],
+     "6": [
+      22,
+      15,
+      17,
+      17,
+      15,
+      14
+     ],
+     "8": [
+      12,
+      9,
+      9,
+      14,
+      14,
+      16,
+      11,
+      15
+     ]
+    },
+    "exists_yes": {
+     "2": [
+      57,
+      43
+     ],
+     "4": [
+      26,
+      27,
+      26,
+      21
+     ],
+     "6": [
+      20,
+      17,
+      10,
+      18,
+      16,
+      19
+     ],
+     "8": [
+      14,
+      13,
+      12,
+      8,
+      11,
+      11,
+      21,
+      10
+     ]
+    }
+   },
+   "sha256": "273e05e0f495d47b93dd15592c63f0f99a99de2fd672622515b87fc8af01c501"
   },
   "test": {
    "source": "val2017",
@@ -13033,9 +13158,71 @@
    "question_seed": "coco2017-s3-test",
    "file": "data/splits/coco2017_seed3/test.jsonl",
    "n_questions": 1600,
-   "n_unique_images": 3379,
+   "n_unique_images": 3392,
    "regenerated_cells": [],
-   "sha256": "ba601ca1a45a1dc1620a0718884f2af329ae4f22c5262206c88590fd0f1b1987"
+   "odd_position_counts": {
+    "forall_no": {
+     "2": [
+      51,
+      49
+     ],
+     "4": [
+      21,
+      26,
+      26,
+      27
+     ],
+     "6": [
+      18,
+      20,
+      16,
+      17,
+      9,
+      20
+     ],
+     "8": [
+      6,
+      15,
+      14,
+      14,
+      16,
+      13,
+      14,
+      8
+     ]
+    },
+    "exists_yes": {
+     "2": [
+      44,
+      56
+     ],
+     "4": [
+      25,
+      21,
+      31,
+      23
+     ],
+     "6": [
+      14,
+      17,
+      15,
+      17,
+      13,
+      24
+     ],
+     "8": [
+      14,
+      14,
+      10,
+      16,
+      12,
+      18,
+      11,
+      5
+     ]
+    }
+   },
+   "sha256": "d96f159f3f358a29d877a1ad84f06cee4bca4b1daaff29247a84af7a033cf494"
   },
   "test_extN": {
    "source": "val2017",
@@ -13050,9 +13237,99 @@
    "question_seed": "coco2017-s3-test_extN",
    "file": "data/splits/coco2017_seed3/test_extN.jsonl",
    "n_questions": 1200,
-   "n_unique_images": 4177,
+   "n_unique_images": 4170,
    "regenerated_cells": [],
-   "sha256": "deac2fc624802047f95a55ceadd18ff8ce84063fc82311018a9ee4734c8c982b"
+   "odd_position_counts": {
+    "forall_no": {
+     "10": [
+      7,
+      13,
+      4,
+      16,
+      11,
+      4,
+      14,
+      9,
+      8,
+      14
+     ],
+     "12": [
+      5,
+      8,
+      8,
+      12,
+      7,
+      2,
+      8,
+      8,
+      14,
+      7,
+      11,
+      10
+     ],
+     "14": [
+      8,
+      14,
+      6,
+      7,
+      7,
+      7,
+      11,
+      5,
+      7,
+      4,
+      5,
+      7,
+      5,
+      7
+     ]
+    },
+    "exists_yes": {
+     "10": [
+      11,
+      15,
+      8,
+      13,
+      8,
+      13,
+      9,
+      5,
+      8,
+      10
+     ],
+     "12": [
+      6,
+      7,
+      5,
+      10,
+      9,
+      4,
+      11,
+      5,
+      8,
+      10,
+      16,
+      9
+     ],
+     "14": [
+      10,
+      4,
+      8,
+      4,
+      4,
+      5,
+      8,
+      8,
+      6,
+      6,
+      10,
+      9,
+      12,
+      6
+     ]
+    }
+   },
+   "sha256": "2ab7f94ee92c5856290a222bdafe410b8a5e7c7c6ca0d2ad1e57b9887fd1068a"
   }
  },
  "unseen_class": {

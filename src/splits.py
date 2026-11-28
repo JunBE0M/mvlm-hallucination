@@ -13,6 +13,10 @@ seed K 하나 안에서 (문항 생성 규칙은 src/data.py 의 generate_questi
     test       COCO val2017 전체, N 2·4·6·8, 칸당 5 -> 1,600
     test_extN  COCO val2017 전체, N 10·12·14, 칸당 5 -> 1,200 (지금 생성·고정, 실행은 나중)
   - 칸 = (클래스, N). 유형 = forall_yes / forall_no / exists_yes / exists_no. 클래스는 configs/default.yaml 의 20개.
+  - 한 장만 다른 사진(forall_no 의 객체 없는 사진, exists_yes 의 객체 있는 사진)의 자리는 문항마다 1..N 중
+    같은 확률로 무작위로 뽑는다 (odd_position="random"). 나머지 사진도 무작위 순서다.
+    기존 "uniform" 은 칸당 문항 수가 N 보다 작으면 뒤쪽 자리가 빠져서 쓰지 않는다 (2026-11-28 수정).
+    manifest 에 split·유형·N 별 자리 분포를 기록하고, check 는 기대 문항 수가 5 이상인데 비어 있는 자리가 있으면 실패한다.
   - 이미지 풀 선택과 문항 생성의 난수는 모두 seed K 에서 나온다 (문항 seed 문자열: "coco2017-s{K}-{split}").
     seed 가 다르면 풀과 문항이 모두 새로 뽑힌다 (독립 반복). B(LoRA) 학습 seed 도 K 로 기록한다.
   - generate_questions 는 문항마다 풀에서 무작위로 뽑으므로 split 안에서 같은 이미지가 다른 조합으로 다시 쓰일 수 있다.
@@ -54,6 +58,9 @@ POOLS = {   # train2017 에서 이 순서로 뽑는다 (val 은 train 과 겹치
 NS_MAIN = [2, 4, 6, 8]
 NS_EXT = [10, 12, 14]
 UNSEEN = {"n": 5, "seed": f"{NAME}-unseen"}
+ODD_POSITION = "random"                        # 한 장만 다른 사진의 자리 배정 방식 (data.odd_positions)
+ODD_KEYS = {"forall_no": "absent_positions", "exists_yes": "present_positions"}
+MIN_EXPECTED = 5                               # 자리당 기대 문항 수가 이 이상인 칸만 빈 자리를 검사
 
 MIH_RE = re.compile(r"COCO_val2014_(\d{12})\.jpg")
 
@@ -137,15 +144,38 @@ def select_pools(index: CocoIndex, classes, exclude, pools=POOLS, rng_seed: str 
 
 
 # ------------------------------------------------------------------ 문항
-def make_cfg(classes, templates, Ns, n_per_type, seed, image_dir) -> dict:
+def make_cfg(classes, templates, Ns, n_per_type, seed, image_dir, odd_position=ODD_POSITION) -> dict:
     """generate_questions 에 넘길 설정 (configs/*.yaml 과 같은 구조). seed 는 정수나 문자열."""
     return {
         "seed": seed,
         "coco": {"image_dir": image_dir},
         "data": {"classes": list(classes), "Ns": list(Ns), "n_forall_pairs": n_per_type,
-                 "n_exists_yes": n_per_type, "n_exists_no": n_per_type, "odd_position": "uniform",
+                 "n_exists_yes": n_per_type, "n_exists_no": n_per_type, "odd_position": odd_position,
                  "area_range": None, "templates": templates},
     }
+
+
+def odd_position_counts(recs: list[dict]) -> dict:
+    """{유형: {N: [자리 0..N-1 별 문항 수]}}. forall_no 는 객체 없는 사진, exists_yes 는 객체 있는 사진의 자리."""
+    out = {}
+    for qtype, key in ODD_KEYS.items():
+        by: dict[int, Counter] = defaultdict(Counter)
+        for q in recs:
+            if q["qtype"] == qtype:
+                by[q["N"]][q[key][0]] += 1
+        out[qtype] = {str(N): [by[N][p] for p in range(N)] for N in sorted(by)}
+    return out
+
+
+def missing_positions(counts: dict, min_expected: float = MIN_EXPECTED) -> list[tuple[str, int, list[int]]]:
+    """자리당 기대 문항 수(전체 ÷ N)가 min_expected 이상인데 한 번도 안 나온 자리. [(유형, N, [자리...])]."""
+    out = []
+    for qtype, by_n in counts.items():
+        for n, c in by_n.items():
+            N = int(n)
+            if sum(c) / N >= min_expected and 0 in c:
+                out.append((qtype, N, [p for p, x in enumerate(c) if x == 0]))
+    return out
 
 
 def bundle_key(q: dict) -> tuple:
@@ -264,7 +294,8 @@ def build(seeds=SEEDS, ann_dir="annotations", out_root=OUT_ROOT, mih_dir=MIH_DIR
             "git_head": head,
             "classes": list(classes),
             "templates": templates,
-            "generator": "src/data.py generate_questions (minimal pairs, uniform odd position, per-(seed, class, N) RNG)",
+            "generator": "src/data.py generate_questions (minimal pairs, per-(seed, class, N) RNG)",
+            "odd_position": ODD_POSITION,
             "source": "COCO 2017 (train/val splits from train2017, test splits from val2017)",
             "coco2014": "not used as an image source. COCO 2017 re-splits the 2014 images with the same image ids; "
                         "2014 file names appear only in the MIHBench exclusion below (converted to ids)",
@@ -293,7 +324,8 @@ def build(seeds=SEEDS, ann_dir="annotations", out_root=OUT_ROOT, mih_dir=MIH_DIR
             manifest["splits"][split] = {
                 **sp, "question_seed": qseed, "file": str(path), "n_questions": len(recs),
                 "n_unique_images": len({i for q in recs for i in q["image_ids"]}),
-                "regenerated_cells": regen, "sha256": sha256_file(path),
+                "regenerated_cells": regen, "odd_position_counts": odd_position_counts(recs),
+                "sha256": sha256_file(path),
             }
             print(f"{NAME}_seed{seed} {split:10s} {len(recs):5d} questions  "
                   f"{manifest['splits'][split]['n_unique_images']:5d} images  regenerated cells {len(regen)}  -> {path}")
@@ -316,6 +348,8 @@ def check(manifest_path) -> list[str]:
     m = json.load(open(manifest_path, encoding="utf-8"))
     errs: list[str] = []
     seed = m["seed"]
+    if m.get("odd_position") != ODD_POSITION:
+        errs.append(f"odd_position is {m.get('odd_position')!r}, expected {ODD_POSITION!r}")
     pools = {k: set(v["image_ids"]) for k, v in m["pools"].items()}
     names = list(pools)
     for i, a in enumerate(names):
@@ -341,6 +375,8 @@ def check(manifest_path) -> list[str]:
         expect = Counter({(c, N, t): s["n_per_type"] for c in m["classes"] for N in s["Ns"] for t in QTYPES})
         if cells != expect:
             errs.append(f"{split}: per-cell counts differ from {s['n_per_type']} per (class, N, type)")
+        for qtype, N, empty in missing_positions(odd_position_counts(recs)):
+            errs.append(f"{split}: {qtype} N={N} odd image never at positions {empty}")
         for q in recs:
             if q["qid"] in qids:
                 errs.append(f"{split}: duplicate qid {q['qid']}")
